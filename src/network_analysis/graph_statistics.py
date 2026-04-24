@@ -1,5 +1,20 @@
 import numpy as np
 import itertools
+import networkx as nx
+
+def D_to_NXgraph(D, G_directed):
+    if G_directed == False:
+        G = nx.Graph()
+    elif G_directed == True:
+        G = nx.DiGraph()
+    nodes = range(D.shape[1])
+    rows, cols = np.where(D > 0)
+    edge_pos = zip(rows.tolist(), cols.tolist())
+    edges = [(ind[0],ind[1],{'weight': D[ind[0],ind[1]]}) for ind in edge_pos]
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
+    return G
+
 
 def find_ones_pos(lst):
     return [i for i, x in enumerate(lst) if x == 1]
@@ -60,7 +75,6 @@ class AdjGraph_Statistics(InciGraph_Statistics):
             self.col_node_label = {j: j for j in range(col_dim)}
 
 
-
     #takes incidence matrix of a hypergraph and flatten it in the row direction
     def FlattenHyper_Reverse(self):
         row_dim, col_dim = self.InciMat.shape[0], self.InciMat.shape[1]
@@ -76,6 +90,22 @@ class AdjGraph_Statistics(InciGraph_Statistics):
         self.AdjMatRev = AdjMat
         if self.row_node_label is None:
             self.row_node_label = {i: i for i in range(row_dim)}
+
+
+class NetworkX_Statistics(AdjGraph_Statistics):
+    def __init__(self, edge_weight_option, G_directed, InciMat=None, AdjMat=None, AdjMatRev=None, row_node_label=None, col_node_label=None):
+        super().__init__(edge_weight_option, InciMat, AdjMat, AdjMatRev, row_node_label, col_node_label)
+        self.G_directed = G_directed
+        self.G = D_to_NXgraph(self.AdjMat, G_directed) if self.AdjMat is not None else None
+        self.GRev = D_to_NXgraph(self.AdjMatRev, G_directed) if self.AdjMatRev is not None else None
+
+    def FlattenHyper(self):
+        super().FlattenHyper()
+        self.G = D_to_NXgraph(self.AdjMat, self.G_directed)
+
+    def FlattenHyper_Reverse(self):
+        super().FlattenHyper_Reverse()
+        self.GRev = D_to_NXgraph(self.AdjMatRev, self.G_directed)
 
 
 
