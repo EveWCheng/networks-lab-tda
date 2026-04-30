@@ -37,6 +37,7 @@ def main():
         print("id", id)
         for i, (key,sign) in enumerate(harmonic_computer.harmonic_cycles[1][id].items()):
             print("key",key)
+            #sign is the weight
             print("sign",sign)
 
 main()
