@@ -33,10 +33,9 @@ def compute_harmonics(simplices, appears_at, dim=1):
     homology_computer.compute_persistent_homology(K, with_representatives=True, modulus=0)
 
     harmonic_computer = matilda.harmonic.HarmonicRepresentativesComputer(K, homology_computer)
-    harmonic_computer.compute_harmonic_cycles(dim=dim, verbose=3)
+    harmonic_computer.compute_harmonic_cycles(dim=dim)
 
     print("\n--- Harmonic Cycles ---")
-    print(harmonic_computer.harmonic_cycles)
 
     for i, id in enumerate(harmonic_computer.harmonic_cycles[dim].keys()):
         print(f"\nCycle {i}, id={id}")
@@ -47,17 +46,16 @@ def compute_harmonics(simplices, appears_at, dim=1):
 
 
 def main():
-    pts = [(1, 0), (2, 0), (1, 1), (2, 1)]
+    pts = [(1, 0), (2, 0), (1, 1), (2, 1),(2.2,0.5)]
     D = [[np.sqrt((x1-x2)**2 + (y1-y2)**2) for x2, y2 in pts] for x1, y1 in pts]
 
     simplices, births = rips_filtration(D, threshold=1.5)
-
-#    print("Simplex filtration (0-indexed vertices):")
-#    for s, b in zip(simplices, births):
-#        print(f"  {s} -> {round(b, 6)}")
-
-#    write_filtration_json(simplices, births, "filtration.json")
-
     compute_harmonics(simplices, births, dim=1)
 
-main()
+
+def main_2():
+    simplices = [[0], [1], [2], [0, 1], [0, 2], [1, 2], [3], [0, 1, 2], [0, 3], [2, 3]]
+    appears_at=[0, 1, 2, 3, 3, 3, 4, 5, 6, 6]
+    compute_harmonics(simplices, appears_at, dim=1)
+
+main_2()
