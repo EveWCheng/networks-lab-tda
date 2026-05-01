@@ -15,7 +15,7 @@ dependencies = [
 
 [tool.uv.workspace]
 members = [
-    "workspaces/matilda",
+    "workspace/matilda",
     "network_lab_tda",
 ]
 
