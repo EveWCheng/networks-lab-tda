@@ -16,6 +16,7 @@ dependencies = [
 [tool.uv.workspace]
 members = [
     "workspaces/external_python_packages/*",
+    "workspaces/tda_analysis",
 ]
 
 [tool.uv.sources]
