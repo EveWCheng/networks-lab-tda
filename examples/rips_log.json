@@ -136,6 +136,7 @@
   "harmonic_cycles": [
     {
       "cycle_index": 0,
+      "birth": 1.0,
       "edges": [
         {
           "simplex": [

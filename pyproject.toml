@@ -10,6 +10,7 @@ dependencies = [
     "matplotlib>=3.10.9",
     "networkx>=3.6.1",
     "pandas>=3.0.2",
+    "pyvis>=0.3.2",
     "tqdm>=4.67.3",
 ]
 
