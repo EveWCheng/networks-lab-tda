@@ -1,7 +1,7 @@
 import os
 import numpy as np
 from network_lab_tda.tda_analysis import harmonic_cycle
-from network_lab_tda.tda_visualisation.tda_plot import tda_plot_from_jason
+from network_lab_tda.tda_visualisation.tda_visual import tda_visual_from_jason
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,14 +21,13 @@ def main():
     hc.run_harmonics()
     hc.save_log()
 
-    # -- getting the interactive graph
-    html_path = os.path.join(HERE, "test_network.html")
-    plotter = tda_plot_from_jason(
+    # -- getting the interactive graph  (output → examples/rips_complex.html)
+    plotter = tda_visual_from_jason(
         jason_path=log_path,
         threshold=None,
         distance_mat=D,
         neighbour_layers=0,
-        log_path=html_path,
+        log_path=HERE,
     )
     plotter.tda_plot()
 
