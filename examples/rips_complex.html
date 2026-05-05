@@ -317,5 +317,109 @@ function highlightFilter(filter) {
               }
               drawGraph();
         </script>
-    </body>
+    
+    <script>
+    var TRI_FILL   = "rgba(100, 160, 255, 0.22)";
+    var TRI_STROKE = "rgba(100, 160, 255, 0.55)";
+    var TET_FILL   = "rgba(255, 140, 80,  0.18)";
+    var TET_STROKE = "rgba(255, 140, 80,  0.50)";
+
+    var triangles = [[2, 3, 4], [0, 14, 15], [7, 8, 9], [3, 4, 5], [11, 12, 13], [4, 5, 6], [8, 9, 10], [1, 2, 3], [10, 11, 12], [9, 10, 11], [13, 14, 15], [0, 1, 2], [12, 13, 14], [0, 1, 15], [5, 6, 7], [6, 7, 8], [2, 3, 5], [2, 4, 5], [0, 13, 14], [0, 13, 15], [9, 10, 12], [9, 11, 12], [11, 12, 14], [11, 13, 14], [4, 5, 7], [4, 6, 7], [7, 8, 10], [7, 9, 10], [1, 2, 4], [1, 3, 4], [3, 4, 6], [3, 5, 6], [8, 9, 11], [8, 10, 11], [0, 2, 15], [1, 2, 15], [10, 11, 13], [10, 12, 13], [0, 1, 14], [1, 14, 15], [0, 1, 3], [0, 2, 3], [6, 7, 9], [6, 8, 9], [5, 6, 8], [5, 7, 8], [2, 3, 6], [2, 4, 6], [2, 5, 6], [12, 13, 15], [12, 14, 15], [0, 2, 14], [1, 2, 14], [2, 14, 15], [8, 9, 12], [8, 10, 12], [8, 11, 12], [9, 10, 13], [9, 11, 13], [9, 12, 13], [7, 8, 11], [7, 9, 11], [7, 10, 11], [4, 5, 8], [4, 6, 8], [4, 7, 8], [1, 2, 5], [1, 3, 5], [1, 4, 5], [3, 4, 7], [3, 5, 7], [3, 6, 7], [0, 12, 13], [0, 12, 14], [0, 12, 15], [0, 1, 4], [0, 2, 4], [0, 3, 4], [0, 1, 13], [1, 13, 14], [1, 13, 15], [10, 11, 14], [10, 12, 14], [10, 13, 14], [2, 3, 7], [2, 4, 7], [2, 5, 7], [2, 6, 7], [11, 12, 15], [11, 13, 15], [11, 14, 15], [5, 6, 9], [5, 7, 9], [5, 8, 9], [0, 3, 15], [1, 3, 15], [2, 3, 15], [0, 2, 13], [1, 2, 13], [2, 13, 14], [2, 13, 15]];
+    var tetras    = [];
+
+    function attachOverlay() {
+      if (typeof network === "undefined") { setTimeout(attachOverlay, 100); return; }
+
+      var container = document.getElementById("mynetwork");
+      var visCanvas = container.querySelector("canvas");
+      if (!visCanvas) { setTimeout(attachOverlay, 100); return; }
+
+      var oc = document.createElement("canvas");
+      oc.style.position      = "absolute";
+      oc.style.top           = "0"; oc.style.left = "0";
+      oc.style.pointerEvents = "none";
+      oc.style.zIndex        = "5";
+      container.style.position = "relative";
+      container.appendChild(oc);
+
+      var ctx = oc.getContext("2d");
+
+      function syncSize() {
+        oc.width  = visCanvas.width;
+        oc.height = visCanvas.height;
+      }
+      syncSize();
+
+      function getNodePos(id) {
+        var pos = network.getPositions([id]);
+        if (!pos[id]) return null;
+        return network.canvasToDOM({ x: pos[id].x, y: pos[id].y });
+      }
+
+      function drawPolygon(ids, fill, stroke) {
+        var pts = ids.map(getNodePos);
+        if (pts.some(p => p === null)) return;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fillStyle   = fill;   ctx.fill();
+        ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke();
+      }
+
+      function tetFaces(ids) {
+        return [
+          [ids[0], ids[1], ids[2]],
+          [ids[0], ids[1], ids[3]],
+          [ids[0], ids[2], ids[3]],
+          [ids[1], ids[2], ids[3]],
+        ];
+      }
+
+      function redraw() {
+        syncSize();
+        ctx.clearRect(0, 0, oc.width, oc.height);
+        tetras.forEach(function(ids) {
+          tetFaces(ids).forEach(function(face) { drawPolygon(face, TET_FILL, TET_STROKE); });
+        });
+        triangles.forEach(function(ids) { drawPolygon(ids, TRI_FILL, TRI_STROKE); });
+      }
+
+      network.on("afterDrawing", function() { redraw(); });
+      window.addEventListener("resize", function() { syncSize(); redraw(); });
+      redraw();
+    }
+
+    setTimeout(attachOverlay, 50);
+    </script>
+    
+
+    <div style="position:fixed; bottom:18px; left:18px; background:rgba(20,20,40,0.88);
+                border:1px solid #444; border-radius:8px; padding:12px 16px;
+                font-family:sans-serif; font-size:13px; color:#ccc; z-index:100;">
+      <div style="font-weight:600; margin-bottom:8px; color:#fff;">Rips complex  ε=1.5426379533165484</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="width:14px;height:14px;border-radius:50%;background:#e0e0ff;display:inline-block;"></span>
+        <span>0-simplex &nbsp;(16 vertices)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="width:18px;height:3px;background:#7070cc;display:inline-block;"></span>
+        <span>1-simplex &nbsp;(65 edges)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="width:14px;height:14px;background:rgba(100,160,255,0.5);
+                     border:1.5px solid rgba(100,160,255,0.9);display:inline-block;"></span>
+        <span>2-simplex &nbsp;(101 triangles)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:14px;height:14px;background:rgba(255,140,80,0.45);
+                     border:1.5px solid rgba(255,140,80,0.9);display:inline-block;"></span>
+        <span>3-simplex &nbsp;(0 tetrahedra)</span>
+      </div>
+      <div style="margin-top:10px; font-size:11px; color:#888; border-top:1px solid #444; padding-top:8px;">
+        Drag nodes · Scroll to zoom · Hover for info
+      </div>
+    </div>
+    
+</body>
 </html>

@@ -7,7 +7,7 @@ def main():
     D = [[np.sqrt((x1-x2)**2 + (y1-y2)**2) for x2, y2 in pts] for x1, y1 in pts]
 
     hc = harmonic_cycle(D, cycle_dim=1, sim_log=True)
-    hc.run_harmonics(threshold=1.5)
+    hc.run_harmonics()
     hc.save_log()
 
 
