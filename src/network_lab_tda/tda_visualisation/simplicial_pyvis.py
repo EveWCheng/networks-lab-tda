@@ -61,10 +61,9 @@ class simplicial_pyvis:
         #in the form of list of list of simplicies, e.g: [[[1,4],[3,4]],...]
         self.cycles = cycles
         self.cycle_dim = cycle_dim
-        if log_path is None:
-            self.log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "network.html")
-        else:
-            self.log_path = log_path
+
+        self.log_path = log_path or os.path.join(os.getcwd(), "network.html")
+
         # ---------------------
         if index_to_name is not None:
             self.index_to_name = index_to_name
