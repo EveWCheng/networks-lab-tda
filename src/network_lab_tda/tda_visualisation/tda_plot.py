@@ -17,7 +17,7 @@ class tda_plot_from_jason:
         self.data = data
 
         if self.threshold is None and data["harmonic_cycles"]:
-            self.threshold = min(c["birth"] for c in data["harmonic_cycles"])
+            self.threshold = min(c["birth"] for c in data["harmonic_cycles"])+1
 
         if self.log_path is None:
             self.log_path = Path.cwd()

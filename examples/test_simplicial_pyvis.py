@@ -6,6 +6,7 @@ from network_lab_tda.tda_visualisation.tda_plot import tda_plot_from_jason
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 def main():
+    #--- set up the distance matrix, replace for you project --- 
     rng = np.random.default_rng(42)
     n = 16
     angles = np.linspace(0, 2 * np.pi, n, endpoint=False)
@@ -14,11 +15,13 @@ def main():
 
     D = np.array([[np.linalg.norm(pts[i] - pts[j]) for j in range(n)] for i in range(n)])
 
+    # -- getting harmonic cycles --
     log_path = os.path.join(HERE, "test_log.json")
     hc = harmonic_cycle(D.tolist(), cycle_dim=1, sim_log=True, log_path=log_path)
     hc.run_harmonics()
     hc.save_log()
 
+    # -- getting the interactive graph
     html_path = os.path.join(HERE, "test_network.html")
     plotter = tda_plot_from_jason(
         jason_path=log_path,
