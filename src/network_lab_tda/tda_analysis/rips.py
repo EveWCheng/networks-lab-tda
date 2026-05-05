@@ -21,6 +21,6 @@ class Rips:
         simplices = [list(s) for s, _ in filtration]
         births = [b for _, b in filtration]
         if log:
-            self.log["simplices"] = simplices
+            self.log["simplicies"] = simplices
             self.log["appears_at"] = births
         return simplices, births
