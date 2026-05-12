@@ -7,29 +7,21 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 def main():
     #--- set up the distance matrix, replace for you project ---
-    # three squares chained corner-to-corner: sides 1, 2, and 3
-    # — gives three 1D holes of increasing size
-    small_square = np.array([
-        [0.0, 0.0],
-        [1.0, 0.0],
-        [1.0, 1.0],
-        [0.0, 1.0],
-    ])
-    # shares (1, 1) with small_square
-    medium_square = np.array([
-        [3.0, 1.0],
-        [3.0, 3.0],
-        [1.0, 3.0],
-    ])
-    # shares (3, 3) with medium_square
-    big_square = np.array([
-        [6.0, 3.0],
-        [6.0, 6.0],
-        [3.0, 6.0],
-    ])
-    pts = np.vstack([small_square, medium_square, big_square])
-    n = pts.shape[0]
+    # two circles connected by a short bridge → two 1D holes
+    n_per_circle = 30
+    radius = 1.0
+    rng = np.random.default_rng(0)
+    theta = np.linspace(0.0, 2.0 * np.pi, n_per_circle, endpoint=False)
 
+    # left circle centered at (-1.1, 0), right circle centered at (1.1, 0)
+    # circles touch at the origin
+    left = np.column_stack([radius * np.cos(theta) - 1.1, radius * np.sin(theta)])
+    right = np.column_stack([radius * np.cos(theta) + 1.1, radius * np.sin(theta)])
+
+    pts = np.vstack([left, right])
+    pts = pts + rng.normal(scale=0.05, size=pts.shape)
+
+    n = pts.shape[0]
     D = np.array([[np.linalg.norm(pts[i] - pts[j]) for j in range(n)] for i in range(n)])
 
 #    pts = [(1, 0), (2, 0), (1, 1), (2, 1)]

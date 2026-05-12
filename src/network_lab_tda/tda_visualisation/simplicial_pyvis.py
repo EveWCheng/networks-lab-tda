@@ -85,7 +85,6 @@ class simplicial_pyvis:
                     source, target = edge
                     edges.append(edge)
                     self.net.add_edge(source, target, value = self.edge_to_length(edge),color=color)
-                print(f"{edges=}")
         else:
             print("Warning: add cycles is not well-defined for higher dimensional cycles")
 
