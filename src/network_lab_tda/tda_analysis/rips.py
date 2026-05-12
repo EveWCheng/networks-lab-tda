@@ -8,7 +8,8 @@ class Rips:
         self.D = distance_mat
         self.max_dimension = max_dimension
         self.log = {}
-        self.log_path = log_path or os.path.join(os.getcwd(), "rips_log.json")
+        self.log_path = log_path or os.path.join(os.getcwd(),"outputs", "rips_log.json")
+        os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
 
     def save_log(self):
         with open(self.log_path, "w") as f:

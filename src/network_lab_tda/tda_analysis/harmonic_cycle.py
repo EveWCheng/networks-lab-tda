@@ -32,13 +32,21 @@ class harmonic_cycle(Rips):
         harmonic_computer = matilda.harmonic.HarmonicRepresentativesComputer(K, homology_computer)
         harmonic_computer.compute_harmonic_cycles(dim=self.cycle_dim)
 
+        bars = homology_computer.bars[self.cycle_dim]
         cycles_log = []
         #check if id is the simplex index of cycle's creator
         for i, id_ in enumerate(harmonic_computer.harmonic_cycles[self.cycle_dim].keys()):
             edges = []
             for key, sign in harmonic_computer.harmonic_cycles[self.cycle_dim][id_].items():
                 edges.append({"simplex": simplices[key], "weight": float(sign)})
-            cycles_log.append({"cycle_index": i, "birth": appears_at[id_], "edges": edges})
+            birth, death = bars[id_]
+            death = float(death) if np.isfinite(death) else None
+            cycles_log.append({
+                "cycle_index": i,
+                "birth": float(birth),
+                "death": death,
+                "edges": edges,
+            })
         self.log["harmonic_cycles"] = cycles_log
 
         return harmonic_computer

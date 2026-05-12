@@ -1,13 +1,11 @@
-from pathlib import Path
 from .simplicial_pyvis import simplicial_pyvis
 import json
-import numpy as np
+import os
 
 class tda_visual_from_jason:
-    def __init__(self, jason_path, threshold, which_cycle="harmonic_cycles", distance_mat=None, neighbour_layers=0, log_path=None):
+    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", neighbour_layers=0, log_path=None):
         self.jason_path = jason_path
-        self.threshold = threshold
-        self.D = distance_mat
+        self.thresholds = thresholds
         self.neighbour_layers = neighbour_layers
         self.which_cycle = which_cycle
         self.log_path = log_path
@@ -16,92 +14,64 @@ class tda_visual_from_jason:
             data = json.load(f)
         self.data = data
 
-        if self.threshold is None and data["harmonic_cycles"]:
-            self.threshold = min(c["birth"] for c in data["harmonic_cycles"]) + 1
+        if self.thresholds is None and data["harmonic_cycles"]:
+            self.thresholds = [c["birth"] for c in data["harmonic_cycles"]]
 
-        if self.log_path is None:
-            self.log_path = Path.cwd()
+        self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
+        os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
 
         self.simplicies = {}
         for simplex, birth in zip(self.data["simplicies"], self.data["appears_at"]):
             dim = str(len(simplex) - 1)
-            self.simplicies.setdefault(dim, []).append([simplex, birth])
+            self.simplicies.setdefault(dim, {})[tuple(sorted(simplex))] = birth
 
+    def cycle_plot(self):
+        for threshold in self.thresholds:
+            self.cycle_plot_per_threshold(threshold)
 
-    def tda_plot(self):
-        cycles = self.read_cycles_from_jason()
-        if self.D is not None:
-            D_neighbour = self.neighbourhood_D(cycles)
-            D_neighbour[D_neighbour > self.threshold] = 0.0
-        else:
-            D_neighbour = self.D
-        simplicies = self.filter_simplicies_threshold()
+    def cycle_plot_per_threshold(self,threshold):
+        cycles = self.read_cycles_from_jason(threshold)
+ #$       if self.D is not None and self.neighbour_layers is not False:
+ #$           D_neighbour = self.neighbourhood_D(cycles)
+ #$           D_neighbour[D_neighbour > threshold] = 0.0
+ #$       else:
+ #$           D_neighbour = self.D
+        simplicies = self.filter_simplicies_threshold(threshold)
         vis = simplicial_pyvis(
-                distance_mat=D_neighbour,
                 simplicies=simplicies,
                 max_dim=1,
                 cycles=cycles,
-                cycle_dim=1
+                cycle_dim=1,
+                log_path=os.path.join(self.log_path,f"threshold_{threshold}_network.html")
                 )
         vis.add_graph_to_net()
         vis.make_net()
-        print(f"Graph HTML saved to {self.log_path}")
-        self.add_polygon(vis.net)
+        print(f"Graph HTML saved to {vis.log_path}")
+        self.add_polygon(vis.net,threshold)
 
-    def read_cycles_from_jason(self):
+    def read_cycles_from_jason(self,threshold):
         cycles = []
         for cycle in self.data[self.which_cycle]:
-            if cycle["birth"] <= self.threshold:
+            if cycle["birth"] <= threshold and float(cycle["death"]) > threshold:
                 cycles.append([edge["simplex"] for edge in cycle["edges"]])
         return cycles
 
-    def filter_D_threshold(self):
-        D_ = self.D.copy()
-        D_[D_ > self.threshold] = 0.0
-        return D_
-
-    def filter_simplicies_threshold(self):
+    def filter_simplicies_threshold(self, threshold):
         filtered = {}
         for dim, simplices in self.simplicies.items():
-            for simplex, birth in simplices:
-                if birth <= self.threshold:
-                    filtered.setdefault(dim, []).append([simplex, birth])
+            for simplex, birth in simplices.items():
+                if birth <= threshold:
+                    filtered.setdefault(dim, {})[simplex] = birth
+#        print(f"{filtered=}")
         return filtered
-
-    def neighbourhood_D(self, cycles):
-        def find_all_verts(D, cycles, num_layer):
-            cycle_verts = set()
-            for cycle in cycles:
-                for edge in cycle:
-                    cycle_verts.update(edge)
-
-            if num_layer == 0:
-                return cycle_verts
-
-            all_verts = cycle_verts.copy()
-            frontier = cycle_verts.copy()
-            for _ in range(num_layer):
-                next_frontier = set()
-                for v in frontier:
-                    neighbours = set(np.where(D[v] > 0)[0].tolist())
-                    next_frontier.update(neighbours - all_verts)
-                all_verts.update(next_frontier)
-                frontier = next_frontier
-            return all_verts
-        all_verts = find_all_verts(self.D, cycles, self.neighbour_layers)
-        D_new = np.zeros_like(self.D)
-        verts = list(all_verts)
-        ix = np.ix_(verts, verts)
-        D_new[ix] = self.D[ix]
-        return D_new
 
     # ── Polygon overlay ──────────────────────────────────────────────────────────
 
     def overlay_js(self, simplex_tuple):
         _, _, triangles, tetras = simplex_tuple
 
-        tri_json = json.dumps([s[0] for s in triangles])
-        tet_json = json.dumps([s[0] for s in tetras])
+        tri_json = json.dumps([list(k) for k in triangles.keys()])
+        tet_json = json.dumps([list(k) for k in tetras.keys()])
         return f"""
     <script>
     var TRI_FILL   = "rgba(100, 160, 255, 0.22)";
@@ -182,13 +152,13 @@ class tda_visual_from_jason:
     def inject_overlay(self, html, simplex_tuple):
         return html.replace("</body>", self.overlay_js(simplex_tuple) + "\n</body>")
 
-    def legend_info_panel(self,simplex_tuple):
+    def legend_info_panel(self,simplex_tuple,threshold):
         vertices, edges,triangles,tetras = simplex_tuple
         return f"""
     <div style="position:fixed; bottom:18px; left:18px; background:rgba(20,20,40,0.88);
                 border:1px solid #444; border-radius:8px; padding:12px 16px;
                 font-family:sans-serif; font-size:13px; color:#ccc; z-index:100;">
-      <div style="font-weight:600; margin-bottom:8px; color:#fff;">Rips complex  ε={self.threshold}</div>
+      <div style="font-weight:600; margin-bottom:8px; color:#fff;">Rips complex  ε={threshold}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
         <span style="width:14px;height:14px;border-radius:50%;background:#e0e0ff;display:inline-block;"></span>
         <span>0-simplex &nbsp;({len(vertices)} vertices)</span>
@@ -213,16 +183,16 @@ class tda_visual_from_jason:
     </div>
     """
 
-    def add_polygon(self,net):
+    def add_polygon(self,net,threshold):
         html = net.generate_html(notebook=False)
-        simplicies = self.filter_simplicies_threshold()
-        vertices  = simplicies.get("0", [])
-        edges     = simplicies.get("1", [])
-        triangles = simplicies.get("2", [])
-        tetras    = simplicies.get("3", [])
+        simplicies = self.filter_simplicies_threshold(threshold)
+        vertices  = simplicies.get("0", {})
+        edges     = simplicies.get("1", {})
+        triangles = simplicies.get("2", {})
+        tetras    = simplicies.get("3", {})
         simplex_tuple = (vertices,edges,triangles,tetras)
         html = self.inject_overlay(html,simplex_tuple)
-        html = html.replace("</body>", self.legend_info_panel(simplex_tuple) + "\n</body>")
+        html = html.replace("</body>", self.legend_info_panel(simplex_tuple,threshold) + "\n</body>")
         out_path = f"{self.log_path}/rips_complex.html"
         with open(out_path, "w") as f:
             f.write(html)
