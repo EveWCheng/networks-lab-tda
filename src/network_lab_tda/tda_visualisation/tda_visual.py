@@ -53,7 +53,7 @@ class tda_visual_from_jason:
         cycles = []
         for cycle in self.data[self.which_cycle]:
             if cycle["birth"] <= threshold and float(cycle["death"]) > threshold:
-                cycles.append([edge["simplex"] for edge in cycle["edges"]])
+                cycles.append([edge["simplex"] for edge in cycle["edges"] if edge["weight"]!=0])
         return cycles
 
     def filter_simplicies_threshold(self, threshold):
