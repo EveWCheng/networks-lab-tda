@@ -2,6 +2,9 @@ from .simplicial_pyvis import simplicial_pyvis
 import json
 import os
 
+def born_before_threshold(birth,threshold):
+    return birth <= threshold + 1e-5
+
 class tda_visual_from_jason:
     def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", neighbour_layers=0, log_path=None):
         self.jason_path = jason_path
@@ -16,6 +19,7 @@ class tda_visual_from_jason:
 
         if self.thresholds is None and data["harmonic_cycles"]:
             self.thresholds = [c["birth"] for c in data["harmonic_cycles"]]
+            print(self.thresholds)
 
         self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
         os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
@@ -52,15 +56,15 @@ class tda_visual_from_jason:
     def read_cycles_from_jason(self,threshold):
         cycles = []
         for cycle in self.data[self.which_cycle]:
-            if cycle["birth"] <= threshold and float(cycle["death"]) > threshold:
-                cycles.append([edge["simplex"] for edge in cycle["edges"]])
+            if born_before_threshold(cycle["birth"],threshold) and float(cycle["death"]) > threshold:
+                cycles.append([edge["simplex"] for edge in cycle["edges"] if edge["weight"]!=0])
         return cycles
 
     def filter_simplicies_threshold(self, threshold):
         filtered = {}
         for dim, simplices in self.simplicies.items():
             for simplex, birth in simplices.items():
-                if birth <= threshold:
+                if born_before_threshold(birth,threshold):
                     filtered.setdefault(dim, {})[simplex] = birth
 #        print(f"{filtered=}")
         return filtered
