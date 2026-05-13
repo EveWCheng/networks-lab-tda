@@ -24,11 +24,17 @@ This project requires Python 3.14+. You don't need to install it yourself — uv
 
 ## Installation
 
-Clone the repository:
+Clone the repository. `matilda` is included as a git submodule under `workspace/`, so make sure to pull it down at the same time with `--recurse-submodules`:
 
 ```bash
-git clone https://github.com/EveWCheng/networks-lab-tda.git
+git clone --recurse-submodules https://github.com/EveWCheng/networks-lab-tda.git
 cd networks-lab-tda
+```
+
+If you already cloned without `--recurse-submodules`, you can pull the submodule afterwards with:
+
+```bash
+git submodule update --init --recursive
 ```
 
 You then have two ways to work with this project.
