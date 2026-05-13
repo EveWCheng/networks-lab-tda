@@ -66,7 +66,7 @@ dependencies = [
 
 [tool.uv.sources]
 network_lab_tda = { path = "../networks-lab-tda" }
-matilda = { path = "../networks-lab-tda/external_packages/matilda" }
+matilda = { path = "../networks-lab-tda/external_packages/matilda", editable=true }
 ```
 
 You have to list `matilda` explicitly because it isn't on PyPI — it lives as a git submodule inside this repo at `external_packages/matilda/`. `[tool.uv.sources]` is only respected at the workspace/project root, so the *consuming* project has to redeclare it.
