@@ -33,7 +33,7 @@ def main():
     # -- getting harmonic cycles --
     hc = harmonic_cycle(D.tolist(), cycle_dim=1, sim_log=True)
     simplices, appears_at = hc.rips_filtration() 
-    hc = compute_harmonics(simplices, appears_at)
+    hc.compute_harmonics(simplices, appears_at)
     hc.run_harmonics()
     hc.save_log()
 

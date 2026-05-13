@@ -155,3 +155,7 @@ source .venv/bin/activate      # macOS / Linux
 .venv\Scripts\activate         # Windows
 python                         # or jupyter, ipython, etc.
 ```
+
+### Using the example scripts from your own project
+
+The scripts under `networks-lab-tda/examples/` (e.g. `example_plot.py`, `harmonic_example.py`) don't rely on living inside the repo. With either Option 1 or Option 2 set up, you can copy any of them into your own project directory and run them with `uv run python your_copy.py`, and they'll work the same way.
