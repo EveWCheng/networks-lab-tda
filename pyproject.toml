@@ -14,14 +14,8 @@ dependencies = [
     "tqdm>=4.67.3",
 ]
 
-[tool.uv.workspace]
-members = [
-    "workspace/matilda",
-    "network_lab_tda",
-]
-
 [tool.uv.sources]
-matilda = { workspace = true, editable = true }
+matilda = { path = "external_packages/matilda", editable = true }
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12"]

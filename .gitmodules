@@ -1,3 +1,3 @@
-[submodule "workspace/matilda"]
-	path = workspace/matilda
+[submodule "external_packages/matilda"]
+	path = external_packages/matilda
 	url = git@github.com:EveWCheng/matilda.git
