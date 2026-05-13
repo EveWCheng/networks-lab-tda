@@ -41,7 +41,7 @@ def pyvis_setup():
 
 #Distance matrix: designed for Rips. but also accepts simplicies
 class simplicial_pyvis:
-    def __init__(self, max_dim, simplicies, cycles=None, cycle_dim=None, index_to_name=None, log_path=None):
+    def __init__(self, max_dim, simplicies, cycles=None, cycle_dim=1, index_to_name=None, log_path=None):
         #dictionary: "0": {simplex1:birth},{simplex2:birth}, "1": ...
         self.simplicies = simplicies
         self.max_dim = max_dim

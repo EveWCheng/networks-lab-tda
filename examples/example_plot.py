@@ -1,4 +1,6 @@
 import os
+import random
+import string
 import numpy as np
 from network_lab_tda.tda_analysis import harmonic_cycle
 from network_lab_tda.tda_visualisation.tda_visual import tda_visual_from_jason
@@ -34,9 +36,11 @@ def main():
     hc.save_log()
 
     # -- getting the interactive graph  (output -> examples/rips_complex.html)
+    index_to_name = {i: "".join(random.choices(string.ascii_letters, k=5)) for i in range(n)}
     plotter = tda_visual_from_jason(
         jason_path=hc.log_path,
-        neighbour_layers=False
+        neighbour_layers=False,
+        index_to_name=index_to_name
     )
     plotter.cycle_plot()
 
