@@ -6,12 +6,13 @@ def born_before_threshold(birth,threshold):
     return birth <= threshold + 1e-5
 
 class tda_visual_from_jason:
-    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", neighbour_layers=0, log_path=None):
+    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", neighbour_layers=0, log_path=None, index_to_name=None):
         self.jason_path = jason_path
         self.thresholds = thresholds
         self.neighbour_layers = neighbour_layers
         self.which_cycle = which_cycle
         self.log_path = log_path
+        self.index_to_name = index_to_name
 
         with open(self.jason_path) as f:
             data = json.load(f)
@@ -46,6 +47,7 @@ class tda_visual_from_jason:
                 max_dim=1,
                 cycles=cycles,
                 cycle_dim=1,
+                index_to_name = self.index_to_name,
                 log_path=os.path.join(self.log_path,f"threshold_{threshold}_network.html")
                 )
         vis.add_graph_to_net()
