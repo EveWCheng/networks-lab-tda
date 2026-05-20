@@ -159,3 +159,113 @@ python                         # or jupyter, ipython, etc.
 ### Using the example scripts from your own project
 
 The scripts under `networks-lab-tda/examples/` (e.g. `example_plot.py`, `harmonic_example.py`) don't rely on living inside the repo. With either Option 1 or Option 2 set up, you can copy any of them into your own project directory and run them with `uv run python your_copy.py`, and they'll work the same way.
+
+## Output log format (`log.json`)
+
+When you call `save_log()` on a `Rips` (or any subclass like `harmonic_cycle`), the results of the filtration and cycle computation are written to a JSON file. By default this goes to `./outputs/rips_log.json`, but you can override the path via the `log_path` argument to the constructor.
+
+The log is a single JSON object with the following top-level keys:
+
+### `simplicies` and `appears_at` (the filtration)
+
+These two arrays are written when you run `rips_filtration(..., log=True)` (which `harmonic_cycle` does automatically when constructed with `sim_log=True`). They describe the full Rips filtration as a flat, sorted list:
+
+- `simplicies` — every simplex in the complex, listed as an array of vertex indices. A `[0]` is a vertex, `[0, 2]` is an edge, `[0, 1, 3]` is a triangle, and so on.
+- `appears_at` — the filtration value (birth time) at which the simplex on the corresponding row of `simplicies` enters the complex.
+
+The two arrays are aligned by index: `simplicies[i]` first appears at `appears_at[i]`. The list is sorted by `appears_at` so you can read it top-to-bottom as the order in which simplices are added as the filtration radius grows.
+
+```json
+{
+  "simplicies": [[0], [1], [2], [0, 1], [1, 2], [0, 1, 2]],
+  "appears_at": [0.0, 0.0, 0.0, 1.0, 1.2, 1.4]
+}
+```
+
+### Cycle results
+
+In addition to the filtration, the log includes the cycles produced by whichever cycle method you ran. The key depends on the option you chose — currently `harmonic_cycle` writes to `"harmonic_cycles"`. Each entry is one cycle, described as:
+
+- `cycle_index` — position of this cycle in the output list.
+- `birth` — filtration value at which the cycle is born.
+- `death` — filtration value at which the cycle dies, or `null` if it never dies (an essential cycle).
+- `edges` — the simplices that make up the cycle, each with its weight in the representative. An edge with `weight: 0.0` is not part of the cycle's support; nonzero weights indicate which simplices carry the cycle and how strongly.
+
+```json
+{
+  "harmonic_cycles": [
+    {
+      "cycle_index": 0,
+      "birth": 1.4,
+      "death": 2.1,
+      "edges": [
+        {"simplex": [0, 1], "weight": 0.577},
+        {"simplex": [1, 2], "weight": 0.577},
+        {"simplex": [0, 2], "weight": -0.577}
+      ]
+    }
+  ]
+}
+```
+
+The visualisation module (`tda_visualisation.tda_visual`) reads this same file back and uses the `which_cycle` argument to pick which set of cycles to draw — so if other cycle methods are added later, they will appear as additional top-level keys (e.g. `"persistent_cycles"`) alongside `harmonic_cycles`.
+
+### Working with the log directly
+
+Because the log is just JSON, you can load it with the standard library and pull out whatever you need. For example, to grab the first cycle and find its heaviest edge:
+
+```python
+import json
+
+with open("outputs/rips_log.json") as f:
+    log = json.load(f)
+
+cycle = log["harmonic_cycles"][0]
+heaviest = max(cycle["edges"], key=lambda e: abs(e["weight"]))
+print(f"cycle {cycle['cycle_index']}: heaviest edge {heaviest['simplex']} with weight {heaviest['weight']}")
+```
+
+Once the log is loaded as a Python dict, every field described above is plain lists, numbers, and strings — so the same pattern works for any other question you want to ask about the filtration or the cycles.
+
+## Visualisation inputs
+
+The interactive plot is produced by `tda_visual_from_jason` in `network_lab_tda.tda_visualisation.tda_visual`. It reads the log file written by `save_log()` and renders one HTML page per threshold using [pyvis](https://pyvis.readthedocs.io/). All arguments except `jason_path` are optional.
+
+```python
+from network_lab_tda.tda_visualisation.tda_visual import tda_visual_from_jason
+
+plotter = tda_visual_from_jason(
+    jason_path=hc.log_path,         # required
+    thresholds=None,                # default: each cycle's birth value
+    which_cycle="harmonic_cycles",  # which log key to read cycles from
+    neighbour_layers=0,
+    log_path=None,                  # default: ./outputs
+    index_to_name=None,             # default: index → index (no renaming)
+)
+plotter.cycle_plot()
+```
+
+- **`jason_path`** *(str, required)* — path to the `log.json` produced by `Rips.save_log()` / `harmonic_cycle.save_log()`.
+- **`thresholds`** *(list of float, optional)* — filtration radii at which to draw the complex. One HTML file is produced per threshold. If left as `None`, the plotter falls back to the `birth` value of every cycle in the log, so you get one snapshot per cycle birth.
+- **`which_cycle`** *(str, optional)* — top-level key in the log to read cycles from. Defaults to `"harmonic_cycles"`. Switch this if you logged cycles under a different name.
+- **`neighbour_layers`** *(int, optional)* — reserved for limiting the drawing to the *k*-hop neighbourhood of each cycle. Currently a placeholder; pass `0` or `False` to ignore.
+- **`log_path`** *(str, optional)* — output directory for the generated HTML files. Defaults to `./outputs`. One file `threshold_<value>_network.html` and one `rips_complex.html` are written per threshold.
+- **`index_to_name`** *(dict[int, str], optional)* — maps a vertex index (the integer used in `simplicies`) to a display label shown on the node in the visualisation. If omitted, vertices are labelled by their numerical index.
+
+### Example: labelling nodes
+
+In `examples/example_plot.py` the points are anonymous but the script attaches a random 5-letter name to each one so the visualisation is easier to read:
+
+```python
+import random, string
+
+index_to_name = {i: "".join(random.choices(string.ascii_letters, k=5)) for i in range(n)}
+
+plotter = tda_visual_from_jason(
+    jason_path=hc.log_path,
+    index_to_name=index_to_name,
+)
+plotter.cycle_plot()
+```
+
+For real data, build `index_to_name` from whatever identifies your nodes — for example, if your distance matrix was computed from a list of gene names, country codes, or user IDs, pass `{i: my_names[i] for i in range(n)}` and those labels will appear on the rendered graph instead of bare integers.

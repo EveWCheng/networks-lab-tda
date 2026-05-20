@@ -34,7 +34,7 @@ class harmonic_cycle(Rips):
 
         bars = homology_computer.bars[self.cycle_dim]
         cycles_log = []
-        #check if id is the simplex index of cycle's creator
+        #id used for bars and cycles (harmonic.py: line 192)
         for i, id_ in enumerate(harmonic_computer.harmonic_cycles[self.cycle_dim].keys()):
             edges = []
             for key, sign in harmonic_computer.harmonic_cycles[self.cycle_dim][id_].items():
