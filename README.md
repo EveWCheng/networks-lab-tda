@@ -238,7 +238,6 @@ plotter = tda_visual_from_jason(
     jason_path=hc.log_path,         # required
     thresholds=None,                # default: each cycle's birth value
     which_cycle="harmonic_cycles",  # which log key to read cycles from
-    neighbour_layers=0,
     log_path=None,                  # default: ./outputs
     index_to_name=None,             # default: index → index (no renaming)
 )
@@ -248,7 +247,6 @@ plotter.cycle_plot()
 - **`jason_path`** *(str, required)* — path to the `log.json` produced by `Rips.save_log()` / `harmonic_cycle.save_log()`.
 - **`thresholds`** *(list of float, optional)* — filtration radii at which to draw the complex. One HTML file is produced per threshold. If left as `None`, the plotter falls back to the `birth` value of every cycle in the log, so you get one snapshot per cycle birth.
 - **`which_cycle`** *(str, optional)* — top-level key in the log to read cycles from. Defaults to `"harmonic_cycles"`. Switch this if you logged cycles under a different name.
-- **`neighbour_layers`** *(int, optional)* — reserved for limiting the drawing to the *k*-hop neighbourhood of each cycle. Currently a placeholder; pass `0` or `False` to ignore.
 - **`log_path`** *(str, optional)* — output directory for the generated HTML files. Defaults to `./outputs`. One file `threshold_<value>_network.html` and one `rips_complex.html` are written per threshold.
 - **`index_to_name`** *(dict[int, str], optional)* — maps a vertex index (the integer used in `simplicies`) to a display label shown on the node in the visualisation. If omitted, vertices are labelled by their numerical index.
 

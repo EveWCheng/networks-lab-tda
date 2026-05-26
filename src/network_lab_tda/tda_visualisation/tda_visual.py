@@ -6,10 +6,9 @@ def born_before_threshold(birth,threshold):
     return birth <= threshold + 1e-5
 
 class tda_visual_from_jason:
-    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", neighbour_layers=0, log_path=None, index_to_name=None):
+    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", log_path=None, index_to_name=None):
         self.jason_path = jason_path
         self.thresholds = thresholds
-        self.neighbour_layers = neighbour_layers
         self.which_cycle = which_cycle
         self.log_path = log_path
         self.index_to_name = index_to_name
@@ -36,11 +35,6 @@ class tda_visual_from_jason:
 
     def cycle_plot_per_threshold(self,threshold):
         cycles = self.read_cycles_from_jason(threshold)
- #$       if self.D is not None and self.neighbour_layers is not False:
- #$           D_neighbour = self.neighbourhood_D(cycles)
- #$           D_neighbour[D_neighbour > threshold] = 0.0
- #$       else:
- #$           D_neighbour = self.D
         simplicies = self.filter_simplicies_threshold(threshold)
         vis = simplicial_pyvis(
                 simplicies=simplicies,
@@ -78,116 +72,15 @@ class tda_visual_from_jason:
 
         tri_json = json.dumps([list(k) for k in triangles.keys()])
         tet_json = json.dumps([list(k) for k in tetras.keys()])
-        return f"""
-    <script>
-    var TRI_FILL   = "rgba(100, 160, 255, 0.22)";
-    var TRI_STROKE = "rgba(100, 160, 255, 0.55)";
-    var TET_FILL   = "rgba(255, 140, 80,  0.18)";
-    var TET_STROKE = "rgba(255, 140, 80,  0.50)";
 
-    var triangles = {tri_json};
-    var tetras    = {tet_json};
-
-    function attachOverlay() {{
-      if (typeof network === "undefined") {{ setTimeout(attachOverlay, 100); return; }}
-
-      var container = document.getElementById("mynetwork");
-      var visCanvas = container.querySelector("canvas");
-      if (!visCanvas) {{ setTimeout(attachOverlay, 100); return; }}
-
-      var oc = document.createElement("canvas");
-      oc.style.position      = "absolute";
-      oc.style.top           = "0"; oc.style.left = "0";
-      oc.style.pointerEvents = "none";
-      oc.style.zIndex        = "5";
-      container.style.position = "relative";
-      container.appendChild(oc);
-
-      var ctx = oc.getContext("2d");
-
-      function syncSize() {{
-        oc.width  = visCanvas.width;
-        oc.height = visCanvas.height;
-      }}
-      syncSize();
-
-      function getNodePos(id) {{
-        var pos = network.getPositions([id]);
-        if (!pos[id]) return null;
-        return network.canvasToDOM({{ x: pos[id].x, y: pos[id].y }});
-      }}
-
-      function drawPolygon(ids, fill, stroke) {{
-        var pts = ids.map(getNodePos);
-        if (pts.some(p => p === null)) return;
-        ctx.beginPath();
-        ctx.moveTo(pts[0].x, pts[0].y);
-        for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-        ctx.closePath();
-        ctx.fillStyle   = fill;   ctx.fill();
-        ctx.strokeStyle = stroke; ctx.lineWidth = 1.2; ctx.stroke();
-      }}
-
-      function tetFaces(ids) {{
-        return [
-          [ids[0], ids[1], ids[2]],
-          [ids[0], ids[1], ids[3]],
-          [ids[0], ids[2], ids[3]],
-          [ids[1], ids[2], ids[3]],
-        ];
-      }}
-
-      function redraw() {{
-        syncSize();
-        ctx.clearRect(0, 0, oc.width, oc.height);
-        tetras.forEach(function(ids) {{
-          tetFaces(ids).forEach(function(face) {{ drawPolygon(face, TET_FILL, TET_STROKE); }});
-        }});
-        triangles.forEach(function(ids) {{ drawPolygon(ids, TRI_FILL, TRI_STROKE); }});
-      }}
-
-      network.on("afterDrawing", function() {{ redraw(); }});
-      window.addEventListener("resize", function() {{ syncSize(); redraw(); }});
-      redraw();
-    }}
-
-    setTimeout(attachOverlay, 50);
-    </script>
-    """
+        js_path = os.path.join(os.path.dirname(__file__), "overlay.js")
+        with open(js_path) as f:
+            js = f.read()
+        js = js.replace("__TRI_JSON__", tri_json).replace("__TET_JSON__", tet_json)
+        return f"<script>\n{js}\n</script>"
 
     def inject_overlay(self, html, simplex_tuple):
         return html.replace("</body>", self.overlay_js(simplex_tuple) + "\n</body>")
-
-    def legend_info_panel(self,simplex_tuple,threshold):
-        vertices, edges,triangles,tetras = simplex_tuple
-        return f"""
-    <div style="position:fixed; bottom:18px; left:18px; background:rgba(20,20,40,0.88);
-                border:1px solid #444; border-radius:8px; padding:12px 16px;
-                font-family:sans-serif; font-size:13px; color:#ccc; z-index:100;">
-      <div style="font-weight:600; margin-bottom:8px; color:#fff;">Rips complex  ε={threshold}</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-        <span style="width:14px;height:14px;border-radius:50%;background:#e0e0ff;display:inline-block;"></span>
-        <span>0-simplex &nbsp;({len(vertices)} vertices)</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-        <span style="width:18px;height:3px;background:#7070cc;display:inline-block;"></span>
-        <span>1-simplex &nbsp;({len(edges)} edges)</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
-        <span style="width:14px;height:14px;background:rgba(100,160,255,0.5);
-                     border:1.5px solid rgba(100,160,255,0.9);display:inline-block;"></span>
-        <span>2-simplex &nbsp;({len(triangles)} triangles)</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="width:14px;height:14px;background:rgba(255,140,80,0.45);
-                     border:1.5px solid rgba(255,140,80,0.9);display:inline-block;"></span>
-        <span>3-simplex &nbsp;({len(tetras)} tetrahedra)</span>
-      </div>
-      <div style="margin-top:10px; font-size:11px; color:#888; border-top:1px solid #444; padding-top:8px;">
-        Drag nodes · Scroll to zoom · Hover for info
-      </div>
-    </div>
-    """
 
     def add_polygon(self,net,threshold):
         html = net.generate_html(notebook=False)
@@ -198,7 +91,6 @@ class tda_visual_from_jason:
         tetras    = simplicies.get("3", {})
         simplex_tuple = (vertices,edges,triangles,tetras)
         html = self.inject_overlay(html,simplex_tuple)
-        html = html.replace("</body>", self.legend_info_panel(simplex_tuple,threshold) + "\n</body>")
         out_path = f"{self.log_path}/rips_complex.html"
         with open(out_path, "w") as f:
             f.write(html)

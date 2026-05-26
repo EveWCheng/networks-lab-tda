@@ -41,7 +41,6 @@ def main():
     index_to_name = {i: "".join(random.choices(string.ascii_letters, k=5)) for i in range(n)}
     plotter = tda_visual_from_jason(
         jason_path=hc.log_path,
-        neighbour_layers=False,
         index_to_name=index_to_name
     )
     plotter.cycle_plot()
