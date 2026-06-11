@@ -30,23 +30,24 @@ class harmonic_cycle(Rips):
         homology_computer.compute_persistent_homology(K, with_representatives=True, modulus=0)
 
         harmonic_computer = matilda.harmonic.HarmonicRepresentativesComputer(K, homology_computer)
-        harmonic_computer.compute_harmonic_cycles(dim=self.cycle_dim)
 
-        bars = homology_computer.bars[self.cycle_dim]
         cycles_log = []
-        #id used for bars and cycles (harmonic.py: line 192)
-        for i, id_ in enumerate(harmonic_computer.harmonic_cycles[self.cycle_dim].keys()):
-            edges = []
-            for key, sign in harmonic_computer.harmonic_cycles[self.cycle_dim][id_].items():
-                edges.append({"simplex": simplices[key], "weight": float(sign)})
-            birth, death = bars[id_]
-            death = float(death) if np.isfinite(death) else None
-            cycles_log.append({
-                "cycle_index": i,
-                "birth": float(birth),
-                "death": death,
-                "edges": edges,
-            })
+        if homology_computer.persistent_cycles.get(self.cycle_dim):
+            bars = homology_computer.bars[self.cycle_dim]
+            harmonic_computer.compute_harmonic_cycles(dim=self.cycle_dim)
+            #id used for bars and cycles (harmonic.py: line 192)
+            for i, id_ in enumerate(harmonic_computer.harmonic_cycles[self.cycle_dim].keys()):
+                edges = []
+                for key, sign in harmonic_computer.harmonic_cycles[self.cycle_dim][id_].items():
+                    edges.append({"simplex": simplices[key], "weight": float(sign)})
+                birth, death = bars[id_]
+                death = float(death) if np.isfinite(death) else None
+                cycles_log.append({
+                    "cycle_index": i,
+                    "birth": float(birth),
+                    "death": death,
+                    "edges": edges,
+                })
         self.log["harmonic_cycles"] = cycles_log
 
         return harmonic_computer

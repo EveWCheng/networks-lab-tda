@@ -17,10 +17,6 @@ class tda_visual_from_jason:
             data = json.load(f)
         self.data = data
 
-        if self.thresholds is None and data["harmonic_cycles"]:
-            self.thresholds = [c["birth"] for c in data["harmonic_cycles"]]
-            print(self.thresholds)
-
         self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
         os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
 
@@ -28,6 +24,14 @@ class tda_visual_from_jason:
         for simplex, birth in zip(self.data["simplicies"], self.data["appears_at"]):
             dim = str(len(simplex) - 1)
             self.simplicies.setdefault(dim, {})[tuple(sorted(simplex))] = birth
+
+        if self.thresholds is None:
+            if data["harmonic_cycles"]:
+                self.thresholds = [c["birth"] for c in data["harmonic_cycles"]]
+            else:
+                edge_births = list(self.simplicies.get("1", {}).values())
+                self.thresholds = [max(edge_births)] if edge_births else []
+            print(f"no cycles was detected, using {self.thresholds} instead")
 
     def cycle_plot(self):
         for threshold in self.thresholds:
