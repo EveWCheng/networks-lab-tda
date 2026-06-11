@@ -2,12 +2,14 @@ import numpy as np
 import networkx as nx
 from pyvis.network import Network
 from math import floor
-from data_prep import Data_Prep
 import copy
+import os
 
-class Populate_edge(Data_Prep):
-    def __init__(self,filepath=None,matrix=None,epsilon=None):
-        super().__init__(filepath=filepath,matrix=matrix)
+from .Data_Prep import Data_Prep
+
+class Populate_Edge(Data_Prep):
+    def __init__(self,filepath=None,matrix=None,log_path=None,epsilon=None):
+        super().__init__(filepath=filepath,matrix=matrix,log_path=log_path)
         if epsilon == None:
             self.epsilon = np.min(self.matrix[self.matrix>0])
         else:
@@ -15,17 +17,18 @@ class Populate_edge(Data_Prep):
             self.epsilon = epsilon
         self.G = nx.from_numpy_array(self.matrix,edge_attr='length')
         self.max_index = self.matrix.shape[0]
+        self.original_node_count = self.matrix.shape[0]
  
 
-    def visualise(self, output = "graph.html"):
+    def visualise(self):
         net = Network(notebook=False)
         net.from_nx(self.G)
         for node in net.nodes:
             node["label"] = str(node["id"])
-            node["color"] = "#000000"
+            node["color"] = "#000000" if node["id"] < self.original_node_count else "#ff0000"
         for edge in net.edges:
             edge["label"] = str(round(edge['length'], 3))
-        net.write_html(output)
+        net.write_html(os.path.join(self.log_path,"populated_network.html"))
 
     def add_nodes_to_one_edge(self,u,v,length):
         number_nodes = floor(length/self.epsilon)-(1 if length % self.epsilon == 0 else 0)
@@ -51,16 +54,12 @@ class Populate_edge(Data_Prep):
             u,v = e
             length = self.G.edges[e]['length']
             self.add_nodes_to_one_edge(u,v,length)
+        dist_matrix = nx.floyd_warshall_numpy(self.G, weight='length')
+        np.savetxt(os.path.join(self.log_path,"populated_distance_matrix.txt"), dist_matrix)
+        self.visualise()
+        return dist_matrix
 
 
-def test():
-    pe = Populate_edge(filepath="test.txt")
-    pe.visualise("before.html")
-    pe.populate_edges()
-    pe.visualise("after.html")
-
-test()
-            
 
 
 
