@@ -13,12 +13,12 @@ class Populate_Edge(Data_Prep):
         if headers:
             headers_path = os.path.join(self.log_path, header_fn)
             with open(headers_path, "r") as f:
-                self.headers_list = [line.strip() for line in f.readlines()]
-            self.node_labels = dict(enumerate(self.headers_list))
+                headers_list = [line.strip() for line in f.readlines()]
+            self.node_labels = dict(enumerate(headers_list))
         else:
             self.node_labels = {i: i for i in range(G.number_of_nodes())}
         if epsilon == None:
-            self.epsilon = np.percentile([d for _, _, d in G.edges(data='length')], 25)
+            self.epsilon = np.percentile([d for _, _, d in G.edges(data='length')], 40)
         else:
             print(f"Epsilon is set to a custom value {epsilon}")
             self.epsilon = epsilon
@@ -47,7 +47,7 @@ class Populate_Edge(Data_Prep):
             self.G.remove_edge(u,v)
             extra_nodes = []
             for number in range(number_nodes):
-                node_name = max_index+number+1
+                node_name = max_index+number
                 self.G.add_node(node_name)
                 self.node_labels[node_name] = node_name
                 extra_nodes.append(node_name)
