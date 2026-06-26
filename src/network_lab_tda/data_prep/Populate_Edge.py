@@ -8,16 +8,16 @@ import time
 from .Data_Prep import Data_Prep
 
 class Populate_Edge(Data_Prep):
-    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,num_added = 0):
+    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False):
         super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn)
         if headers:
             headers_path = os.path.join(self.log_path, header_fn)
             with open(headers_path, "r") as f:
                 headers_list = [line.strip() for line in f.readlines()]
-            self.node_labels = dict(enumerate(headers_list))
+            self.index_to_name = dict(enumerate(headers_list))
         else:
-            self.node_labels = {i: i for i in range(G.number_of_nodes())}
-        if epsilon == None:
+            self.index_to_name = {i: -i for i in range(G.number_of_nodes())}
+        if epsilon is None:
             self.epsilon = np.percentile([d for _, _, d in G.edges(data='length')], 40)
         else:
             print(f"Epsilon is set to a custom value {epsilon}")
@@ -35,13 +35,15 @@ class Populate_Edge(Data_Prep):
         for node in net.nodes:
             node["label"] = str(node["id"])
             node["color"] = "#000000" if node["id"] < self.original_node_count else "#ff0000"
+            node["font"] = {"size": 8}
         for edge in net.edges:
             edge["label"] = str(round(edge['length'], 3))
+            edge["font"] = {"size": 8}
         net.write_html(os.path.join(self.log_path,name))
 
     def add_nodes_to_one_edge(self,u,v,length):
         number_nodes = math.floor(length/self.epsilon)-(1 if math.isclose(length % self.epsilon, 0) else 0)
-        if number_nodes > 1:
+        if number_nodes >= 1:
             last_edge_weight = length - number_nodes * self.epsilon
             max_index = self.max_index
             self.G.remove_edge(u,v)
@@ -49,7 +51,7 @@ class Populate_Edge(Data_Prep):
             for number in range(number_nodes):
                 node_name = max_index+number
                 self.G.add_node(node_name)
-                self.node_labels[node_name] = node_name
+                self.index_to_name[node_name] = node_name
                 extra_nodes.append(node_name)
 
             self.G.add_edge(u,extra_nodes[0],length=self.epsilon)
@@ -60,6 +62,8 @@ class Populate_Edge(Data_Prep):
             self.num_added += number_nodes
 
     def populate_edges(self):
+        if self.num_added > 0:
+            raise RuntimeError("populate_edges() has already been called; create a new Populate_Edge instance to re-populate.")
         if self.vis:
             self.visualise("unpopulated_network.html")
  
@@ -71,9 +75,10 @@ class Populate_Edge(Data_Prep):
         print(f"{self.num_added} nodes added")
 
         with open(os.path.join(self.log_path, self.populated_header_fn), "w") as f:
-            f.write("\n".join(str(v) for v in self.node_labels.values()))
+            f.write("\n".join(str(v) for v in self.index_to_name.values()))
 
         dist_matrix = nx.floyd_warshall_numpy(self.G, weight='length')
+        self.matrix = dist_matrix
         np.savetxt(os.path.join(self.log_path,"populated_distance_matrix.txt"), dist_matrix)
         print("populated distance matrix is saved")
         if self.vis:

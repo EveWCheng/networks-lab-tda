@@ -160,6 +160,89 @@ python                         # or jupyter, ipython, etc.
 
 The scripts under `networks-lab-tda/examples/` (e.g. `example_plot.py`, `harmonic_example.py`) don't rely on living inside the repo. With either Option 1 or Option 2 set up, you can copy any of them into your own project directory and run them with `uv run python your_copy.py`, and they'll work the same way.
 
+## Data preparation
+
+Before running TDA, you typically need to load your distance data into a NetworkX graph and (optionally) subdivide long edges so the filtration sees a finer-grained metric space. Two classes handle this: `Data_Prep` for loading, and `Populate_Edge` for subdivision.
+
+### `Data_Prep`
+
+`Data_Prep` accepts a distance matrix in three forms — a CSV file, a NumPy array, or an existing NetworkX graph — and builds a weighted `networkx.Graph` from it.
+
+```python
+from network_lab_tda.data_prep.Data_Prep import Data_Prep
+
+# From a CSV file (no headers)
+dp = Data_Prep(filepath="distances.csv")
+
+# From a CSV file with column headers (saves headers to log_path/header.txt)
+dp = Data_Prep(filepath="distances.csv", headers=True)
+
+# From a NumPy distance matrix
+import numpy as np
+dp = Data_Prep(matrix=np.array([[0, 1.2, 3.4], [1.2, 0, 2.1], [3.4, 2.1, 0]]))
+
+# From an existing NetworkX graph
+dp = Data_Prep(G=my_graph)
+```
+
+After construction, `dp.G` is a `networkx.Graph` with an edge attribute `length` equal to the non-zero entries of the distance matrix. If you passed `headers=True`, the column names are also saved to a text file so downstream steps can label nodes.
+
+**Constructor arguments:**
+
+| Argument | Default | Description |
+|---|---|---|
+| `filepath` | `None` | Path to a CSV distance matrix |
+| `matrix` | `None` | NumPy distance matrix (2-D array) |
+| `G` | `None` | Pre-built NetworkX graph |
+| `log_path` | `./outputs` | Directory where output files are written |
+| `headers` | `False` | If `True`, read column headers from the CSV and save them to `header_fn` |
+| `header_fn` | `"header.txt"` | Filename for the saved header list inside `log_path` |
+
+Exactly one of `filepath`, `matrix`, or `G` must be provided.
+
+---
+
+### `Populate_Edge`
+
+Long edges in a sparse network can cause the Rips filtration to add simplices at unrealistically large radii. `Populate_Edge` solves this by subdividing every edge whose length exceeds a threshold `epsilon` into segments of length ≤ `epsilon`, inserting synthetic intermediate nodes. The result is a denser graph whose all-pairs shortest-path matrix more faithfully reflects the geodesic distances in the original network.
+
+```python
+from network_lab_tda.data_prep.Populate_Edge import Populate_Edge
+
+pe = Populate_Edge(G=dp.G, headers=True)
+dist_matrix = pe.populate_edges()
+```
+
+`populate_edges()` returns the new all-pairs distance matrix (computed via Floyd–Warshall) and writes two files to `log_path`:
+
+- `populated_distance_matrix.txt` — the distance matrix after subdivision, ready to pass to `Data_Prep` or directly to `Rips`.
+- `populated_headers.txt` — labels for all nodes (original + synthetic). Synthetic nodes are labelled by their index.
+
+**Constructor arguments:**
+
+| Argument | Default | Description |
+|---|---|---|
+| `G` | *(required)* | NetworkX graph to subdivide (e.g. `dp.G`) |
+| `epsilon` | 40th percentile of edge lengths | Subdivision threshold; edges longer than this are split |
+| `vis` | `False` | If `True`, writes `unpopulated_network.html` and `populated_network.html` to `log_path` for visual inspection |
+| `populated_header_fn` | `"populated_headers.txt"` | Filename for the populated node label list |
+| `headers`, `header_fn`, `log_path` | *(inherited)* | Same as `Data_Prep` |
+
+**Typical pipeline:**
+
+```python
+from network_lab_tda.data_prep.Data_Prep import Data_Prep
+from network_lab_tda.data_prep.Populate_Edge import Populate_Edge
+
+dp = Data_Prep(filepath="distances.csv", headers=True)
+pe = Populate_Edge(G=dp.G, headers=True, vis=True)
+dist_matrix = pe.populate_edges()
+
+# dist_matrix can now be passed to the TDA pipeline
+```
+
+---
+
 ## Output log format (`log.json`)
 
 When you call `save_log()` on a `Rips` (or any subclass like `harmonic_cycle`), the results of the filtration and cycle computation are written to a JSON file. By default this goes to `./outputs/rips_log.json`, but you can override the path via the `log_path` argument to the constructor.

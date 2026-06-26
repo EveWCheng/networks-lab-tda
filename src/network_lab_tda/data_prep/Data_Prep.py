@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import os
-
+import warnings
 
 
 class Data_Prep:
@@ -10,12 +10,9 @@ class Data_Prep:
         self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
         os.makedirs(self.log_path, exist_ok=True)
  
-        if (filepath is None and matrix is None and G is None):
-            print("You need to pass either a distance matrix or a filepath or a networkx object")
-        elif filepath is not None:
+        if filepath is not None:
             if headers:
                 df = pd.read_csv(filepath, sep=None, engine="python", header=0, index_col=0)
-                self.df = df
                 self.matrix = df.to_numpy(dtype=float)
                 headers_list = df.columns.tolist()
                 with open(os.path.join(self.log_path, header_fn), "w") as f:
@@ -25,8 +22,16 @@ class Data_Prep:
                 self.matrix = np.loadtxt(filepath)
         elif matrix is not None:
             self.matrix = matrix
-        else:
+        elif G is not None:
+            warnings.warn(
+                "Distance matrix is being derived from G's adjacency matrix.",
+                UserWarning
+            )
             self.G = G
+            self.matrix = nx.adjacency_matrix(G,weight="length").toarray()
+        else:
+            raise ValueError("You need to pass either a distance matrix or a filepath or a networkx object")
+
         self.headers = headers
         if G is None:
             n = self.matrix.shape[0]
@@ -36,6 +41,8 @@ class Data_Prep:
                 for j in range(i + 1, n):
                     if self.matrix[i,j]>0:
                         self.G.add_edge(i, j, length=self.matrix[i, j])
+        else:
+            self.G = G
 
 
 

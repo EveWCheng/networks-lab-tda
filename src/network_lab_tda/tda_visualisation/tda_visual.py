@@ -25,6 +25,10 @@ class tda_visual_from_jason:
             dim = str(len(simplex) - 1)
             self.simplicies.setdefault(dim, {})[tuple(sorted(simplex))] = birth
 
+        if self.index_to_name is None:
+            vertices = [k[0] for k in self.simplicies.get("0", {}).keys()]
+            self.index_to_name = {v: -v for v in vertices}
+
         if self.thresholds is None:
             if data["harmonic_cycles"]:
                 self.thresholds = [c["birth"] for c in data["harmonic_cycles"]]
@@ -57,7 +61,7 @@ class tda_visual_from_jason:
         cycles = []
         for cycle in self.data[self.which_cycle]:
             if born_before_threshold(cycle["birth"],threshold) and float(cycle["death"]) > threshold:
-                cycles.append([edge["simplex"] for edge in cycle["edges"] if edge["weight"]!=0])
+                cycles.append([(edge["simplex"], edge["weight"]) for edge in cycle["edges"] if edge["weight"]!=0])
         return cycles
 
     def filter_simplicies_threshold(self, threshold):
