@@ -39,7 +39,6 @@ def run_analysis(label,D=None, G=None):
     out_dir = os.path.join(HERE, "outputs", label)
     os.makedirs(out_dir, exist_ok=True)
     
-    "Tree is run"
     if D is None:
         pe = Populate_Edge(G, log_path=out_dir)
         D = pe.populate_edges()
@@ -48,10 +47,7 @@ def run_analysis(label,D=None, G=None):
     n = D.shape[0]
     log_path = os.path.join(out_dir, "rips_log.json")
     hc = harmonic_cycle(D.tolist(), cycle_dim=1, sim_log=True, log_path=log_path)
-    simplices, appears_at = hc.rips_filtration()
-    hc.compute_harmonics(simplices, appears_at)
     hc.run_harmonics()
-    hc.save_log()
 
     index_to_name = {i: "".join(random.choices(string.ascii_letters, k=5)) for i in range(n)}
     plotter = tda_visual_from_jason(
@@ -62,5 +58,5 @@ def run_analysis(label,D=None, G=None):
     plotter.cycle_plot()
 
 
-#run_analysis(dist_matrix(make_circle_pts()), "circle", populate_edge=False)
+#run_analysis("circle", D=dist_matrix(make_circle_pts()))
 run_analysis("tree",G=make_tree_pts())

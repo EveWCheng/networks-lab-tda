@@ -12,9 +12,12 @@ class harmonic_cycle(Rips):
         self.cycle_dim = cycle_dim
         self.sim_log = sim_log
 
-    def run_harmonics(self, threshold=float('inf')):
+    def run_harmonics(self, threshold=float('inf'), save=True):
         simplices, appears_at = self.rips_filtration(threshold=threshold, log=self.sim_log)
-        return self.compute_harmonics(simplices, appears_at)
+        result = self.compute_harmonics(simplices, appears_at)
+        if save:
+            self.save_log()
+        return result
 
     def compute_harmonics(self, simplices, appears_at):
         simplices_np = [np.array(s) for s in simplices]

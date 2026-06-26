@@ -9,13 +9,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # epsilon = 1.0 (shortest edge), so long edges get intermediate nodes inserted
 
 
-def main():
+def main(headers=False, header_fn="header.txt", populated_header_fn="populated_headers.txt"):
     input_path = os.path.join(HERE, "inputs", "example_distance_matrix.txt")
     output_path = os.path.join(HERE, "outputs")
 
-    dp = Data_Prep(filepath=input_path, log_path=output_path)
+    dp = Data_Prep(filepath=input_path, log_path=output_path, headers=headers, header_fn=header_fn)
 
-    pe = Populate_Edge(filepath=input_path, log_path=output_path)
+    pe = Populate_Edge(G=dp.G, log_path=output_path, headers=headers, header_fn=header_fn, populated_header_fn=populated_header_fn)
     print(f"\nEpsilon (shortest edge): {pe.epsilon:.3f}")
     print(f"Original node count:     {pe.original_node_count}")
 

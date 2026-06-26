@@ -30,7 +30,10 @@ def pyvis_setup():
         "solver": "forceAtlas2Based",
         "stabilization": { "iterations": 200 }
       },
-     "interaction": {
+      "edges": {
+        "width": 2
+      },
+      "interaction": {
         "hover": true,
         "tooltipDelay": 100
       }
@@ -58,7 +61,7 @@ class simplicial_pyvis:
             self.index_to_name = index_to_name
         else:
             n = len(simplicies["0"])
-            self.index_to_name = dict(zip(range(n), range(n)))
+            self.index_to_name = {i: -i for i in range(n)}
         self.net = pyvis_setup()
 
     def edge_to_length(self, edge):
@@ -66,7 +69,7 @@ class simplicial_pyvis:
 
     #this needs to be added first, because the package does not overwrite
     def add_cycles(self):
-        if self.cycles == None: 
+        if self.cycles is None: 
             return None
 
         if self.cycle_dim == 1:
@@ -80,11 +83,9 @@ class simplicial_pyvis:
                 for h in hues
             ]
             for cycle, color in zip(self.cycles, colors):
-                edges = []
-                for edge in cycle:
-                    source, target = edge
-                    edges.append(edge)
-                    self.net.add_edge(source, target, length = self.edge_to_length(edge),color=color)
+                for simplex, weight in cycle:
+                    source, target = simplex
+                    self.net.add_edge(source, target, length=self.edge_to_length(simplex), color=color, width=abs(weight) * 8)
         else:
             print("Warning: add cycles is not well-defined for higher dimensional cycles")
 
@@ -92,12 +93,14 @@ class simplicial_pyvis:
     def add_graph_to_net(self):
         nodes = [k[0] for k in self.simplicies["0"].keys()]
         for node in nodes:
-            self.net.add_node(node, label=str(self.index_to_name[node]))
+            name = self.index_to_name[node]
+            label = "" if isinstance(name, (int, float)) and name > 0 else str(name)
+            self.net.add_node(node, label=label, size=5, font={"size": 40})
 
         self.add_cycles()
 
         for source, target in self.simplicies["1"].keys():
-            self.net.add_edge(source, target, color="black")
+            self.net.add_edge(source, target, color="black", length=self.edge_to_length((source, target)))
 
     def make_net(self):
         self.net.show(self.log_path)
