@@ -8,7 +8,6 @@ def main():
 
     hc = harmonic_cycle(D, cycle_dim=1, sim_log=True)
     hc.run_harmonics()
-    hc.save_log()
 
 
 main()

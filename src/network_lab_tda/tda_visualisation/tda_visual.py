@@ -1,6 +1,7 @@
 from .simplicial_pyvis import simplicial_pyvis
 import json
 import os
+import warnings
 
 def born_before_threshold(birth,threshold):
     return birth <= threshold + 1e-5
@@ -10,7 +11,6 @@ class tda_visual_from_jason:
         self.jason_path = jason_path
         self.thresholds = thresholds
         self.which_cycle = which_cycle
-        self.log_path = log_path
         self.index_to_name = index_to_name
 
         with open(self.jason_path) as f:
@@ -18,7 +18,7 @@ class tda_visual_from_jason:
         self.data = data
 
         self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
-        os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
+        os.makedirs(self.log_path, exist_ok=True)
 
         self.simplicies = {}
         for simplex, birth in zip(self.data["simplicies"], self.data["appears_at"]):
@@ -30,18 +30,23 @@ class tda_visual_from_jason:
             self.index_to_name = {v: -v for v in vertices}
 
         if self.thresholds is None:
-            if data["harmonic_cycles"]:
-                self.thresholds = [c["birth"] for c in data["harmonic_cycles"]]
+            if data[self.which_cycle]:
+                self.thresholds = [c["birth"] for c in data[self.which_cycle]]
             else:
                 edge_births = list(self.simplicies.get("1", {}).values())
                 self.thresholds = [max(edge_births)] if edge_births else []
-            print(f"no cycles was detected, using {self.thresholds} instead")
+                print(f"no cycles was detected, using {self.thresholds} instead")
 
     def cycle_plot(self):
         for threshold in self.thresholds:
             self.cycle_plot_per_threshold(threshold)
 
     def cycle_plot_per_threshold(self,threshold):
+        warnings.warn(
+            "cycle_plot only supports visualisation of 1-dimensional cycles. Higher-dimensional cycles are not rendered.",
+            UserWarning,
+            stacklevel=2,
+        )
         cycles = self.read_cycles_from_jason(threshold)
         simplicies = self.filter_simplicies_threshold(threshold)
         vis = simplicial_pyvis(
@@ -60,7 +65,7 @@ class tda_visual_from_jason:
     def read_cycles_from_jason(self,threshold):
         cycles = []
         for cycle in self.data[self.which_cycle]:
-            if born_before_threshold(cycle["birth"],threshold) and float(cycle["death"]) > threshold:
+            if born_before_threshold(cycle["birth"],threshold) and (cycle["death"] is None or float(cycle["death"]) > threshold):
                 cycles.append([(edge["simplex"], edge["weight"]) for edge in cycle["edges"] if edge["weight"]!=0])
         return cycles
 

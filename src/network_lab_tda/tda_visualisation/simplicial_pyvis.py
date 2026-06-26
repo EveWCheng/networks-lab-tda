@@ -69,7 +69,7 @@ class simplicial_pyvis:
 
     #this needs to be added first, because the package does not overwrite
     def add_cycles(self):
-        if self.cycles == None: 
+        if self.cycles is None: 
             return None
 
         if self.cycle_dim == 1:
@@ -100,7 +100,7 @@ class simplicial_pyvis:
         self.add_cycles()
 
         for source, target in self.simplicies["1"].keys():
-            self.net.add_edge(source, target, color="black")
+            self.net.add_edge(source, target, color="black", length=self.edge_to_length((source, target)))
 
     def make_net(self):
         self.net.show(self.log_path)
