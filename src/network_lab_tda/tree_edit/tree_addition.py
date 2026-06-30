@@ -1,4 +1,5 @@
 import json
+import os
 import networkx as nx
 from pathlib import Path
 from pyvis.network import Network
@@ -11,7 +12,7 @@ def load_one_tree(json_path):
 
 
 class TreeBuilder:
-    def __init__(self,tree_groups=None):
+    def __init__(self, tree_groups=None):
         self.G = nx.Graph()
 
     def load_tree(self, tree_groups):
@@ -45,10 +46,12 @@ class TreeBuilder:
         self.nodes = nodes
 
     def add_tree_edges(self,n,nodes):
+        if self.dim - n < 1:
+            return
         if all(node == [] for node in nodes):
             return
 
-        for i, node in enumerate(self.nodes):
+        for i in range(len(self.nodes)):
             for prev_node in self.previous_nodes(n):
                 if set(prev_node).issubset(set(nodes[i])):
                     self.add_G_edge(tuple(prev_node), tuple(self.nodes[i]))
@@ -56,8 +59,6 @@ class TreeBuilder:
                         nodes[i].remove(x)
         self.add_tree_edges(n+1,nodes)
 
-
-    
     def add_tree(self):
         #add leaves
         self.add_tree_nodes()
@@ -67,9 +68,9 @@ class TreeBuilder:
             self.add_tree_edges(n=1,nodes=list(copy.deepcopy(self.nodes)))
         
 
-def build_tree(directory: str):
-    builder = TreeBuilder() 
-    for json_file in Path(directory).glob("*tree*.json"):
+def build_tree(input_dir: str):
+    builder = TreeBuilder()
+    for json_file in Path(input_dir).glob("*tree*.json"):
         tree_groups = load_one_tree(json_file)
         builder.load_tree(tree_groups)
         builder.add_tree()
@@ -88,9 +89,13 @@ def visualize(G: nx.Graph, output: str = "tree.html") -> None:
     net.write_html(output)
 
 
-def main():
-    builder = build_tree(".")
-    visualize(builder.G)
+def merge_trees(input_dir=".", output_dir=".", vis=False):
+    os.makedirs(output_dir, exist_ok=True)
+    builder = build_tree(input_dir=input_dir)
+    data = {"nodes": list(builder.G.nodes()), "edges": list(builder.G.edges())}
+    with open(os.path.join(output_dir, "merged_tree.json"), "w") as f:
+        json.dump(data, f, indent=4, default=list)
+    if vis:
+        visualize(builder.G, output=os.path.join(output_dir, "tree.html"))
 
 
-main()
