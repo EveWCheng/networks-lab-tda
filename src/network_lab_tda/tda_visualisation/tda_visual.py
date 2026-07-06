@@ -7,11 +7,13 @@ def born_before_threshold(birth,threshold):
     return birth <= threshold + 1e-5
 
 class tda_visual_from_jason:
-    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", log_path=None, index_to_name=None):
+    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", log_path=None, index_to_name=None, cycle_qualify=None, verbose=False):
         self.jason_path = jason_path
         self.thresholds = thresholds
         self.which_cycle = which_cycle
         self.index_to_name = index_to_name
+        self.cycle_qualify = cycle_qualify or (lambda drawn_edges: len(drawn_edges) > 0)
+        self.verbose = verbose
 
         with open(self.jason_path) as f:
             data = json.load(f)
@@ -35,18 +37,16 @@ class tda_visual_from_jason:
             else:
                 edge_births = list(self.simplicies.get("1", {}).values())
                 self.thresholds = [max(edge_births)] if edge_births else []
-                print(f"no cycles was detected, using {self.thresholds} instead")
+                if self.verbose:
+                    print(f"no cycles was detected, using {self.thresholds} instead")
 
     def cycle_plot(self):
         for threshold in self.thresholds:
             self.cycle_plot_per_threshold(threshold)
 
     def cycle_plot_per_threshold(self,threshold):
-        warnings.warn(
-            "cycle_plot only supports visualisation of 1-dimensional cycles. Higher-dimensional cycles are not rendered.",
-            UserWarning,
-            stacklevel=2,
-        )
+        if self.verbose:
+            warnings.warn("cycle_plot only supports visualisation of 1-dimensional cycles. Higher-dimensional cycles are not rendered.",UserWarning,stacklevel=2)
         cycles = self.read_cycles_from_jason(threshold)
         simplicies = self.filter_simplicies_threshold(threshold)
         vis = simplicial_pyvis(
@@ -59,14 +59,16 @@ class tda_visual_from_jason:
                 )
         vis.add_graph_to_net()
         vis.make_net()
-        print(f"Graph HTML saved to {vis.log_path}")
         self.add_polygon(vis.net,threshold)
 
     def read_cycles_from_jason(self,threshold):
         cycles = []
         for cycle in self.data[self.which_cycle]:
+            drawn_edges = [(edge["simplex"], edge["weight"]) for edge in cycle["edges"] if edge["weight"]!=0]
+            if not self.cycle_qualify(drawn_edges):
+                continue
             if born_before_threshold(cycle["birth"],threshold) and (cycle["death"] is None or float(cycle["death"]) > threshold):
-                cycles.append([(edge["simplex"], edge["weight"]) for edge in cycle["edges"] if edge["weight"]!=0])
+                cycles.append(drawn_edges)
         return cycles
 
     def filter_simplicies_threshold(self, threshold):
@@ -108,5 +110,3 @@ class tda_visual_from_jason:
         with open(out_path, "w") as f:
             f.write(html)
        
-        print(f"Saved → {out_path}")
-        print(f"Open it in a browser. Drag nodes to re-layout; polygons follow in real time.")
