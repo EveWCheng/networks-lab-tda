@@ -8,8 +8,8 @@ import time
 from .Data_Prep import Data_Prep
 
 class Populate_Edge(Data_Prep):
-    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,max_node_per_edge=5,verbose=False):
-        super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn)
+    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,max_node_per_edge=5,verbose=False,weight_attr='length'):
+        super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn,weight_attr=weight_attr)
         self.verbose = verbose
         if headers:
             headers_path = os.path.join(self.log_path, header_fn)
@@ -21,7 +21,7 @@ class Populate_Edge(Data_Prep):
         else:
             self.index_to_name = {i: -i for i in range(G.number_of_nodes())}
         if epsilon is None:
-            self.epsilon = np.percentile([d for _, _, d in G.edges(data='length')], 40)
+            self.epsilon = np.percentile([d for _, _, d in G.edges(data=self.weight_attr)], 40)
         else:
             if self.verbose:
                 print(f"Epsilon is set to a custom value {epsilon}")
@@ -42,7 +42,7 @@ class Populate_Edge(Data_Prep):
             node["color"] = "#000000" if node["id"] < self.original_node_count else "#ff0000"
             node["font"] = {"size": 8}
         for edge in net.edges:
-            edge["label"] = str(round(edge['length'], 3))
+            edge["label"] = str(round(edge[self.weight_attr], 3))
             edge["font"] = {"size": 8}
         net.write_html(os.path.join(self.log_path,name))
 
@@ -65,10 +65,10 @@ class Populate_Edge(Data_Prep):
                 self.index_to_name[node_name] = node_name
                 extra_nodes.append(node_name)
 
-            self.G.add_edge(u,extra_nodes[0],length=edge_weight)
+            self.G.add_edge(u,extra_nodes[0],**{self.weight_attr:edge_weight})
             for i in range(1,number_nodes):
-                self.G.add_edge(extra_nodes[i-1],extra_nodes[i],length=edge_weight)
-            self.G.add_edge(extra_nodes[-1],v,length=last_edge_weight)
+                self.G.add_edge(extra_nodes[i-1],extra_nodes[i],**{self.weight_attr:edge_weight})
+            self.G.add_edge(extra_nodes[-1],v,**{self.weight_attr:last_edge_weight})
             self.max_index = max_index + number_nodes
             self.num_added += number_nodes
 
@@ -81,7 +81,7 @@ class Populate_Edge(Data_Prep):
         edges = list(self.G.edges(data=False))
         for e in edges:
             u,v = e
-            length = self.G.edges[e]['length']
+            length = self.G.edges[e][self.weight_attr]
             self.add_nodes_to_one_edge(u,v,length)
         if self.verbose:
             print(f"{self.num_added} nodes added")
@@ -89,7 +89,7 @@ class Populate_Edge(Data_Prep):
         with open(os.path.join(self.log_path, self.populated_header_fn), "w") as f:
             f.write("\n".join(str(v) for v in self.index_to_name.values()))
 
-        dist_matrix = nx.floyd_warshall_numpy(self.G, weight='length')
+        dist_matrix = nx.floyd_warshall_numpy(self.G, weight=self.weight_attr)
         self.matrix = dist_matrix
         np.savetxt(os.path.join(self.log_path,"populated_distance_matrix.txt"), dist_matrix)
         if self.vis:
