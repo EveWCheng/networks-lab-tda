@@ -11,6 +11,49 @@ def load_one_tree(json_path):
         return {int(k): tuple(v) for k, v in json.load(json_data).items()}
 
 
+def networkx_to_tree_groups(G: nx.DiGraph) -> dict:
+    leaves = [n for n in G.nodes() if G.out_degree(n) == 0]
+
+    for i, leaf in enumerate(leaves, start=1):
+        G.nodes[leaf]["label"] = [i]
+
+    def label_predecessors(frontier):
+        if not frontier:
+            return
+        candidates = set()
+        for node in frontier:
+            candidates.update(G.predecessors(node))
+
+        newly_labeled = []
+        for node in candidates:
+            if "label" in G.nodes[node]:
+                continue
+            children = list(G.successors(node))
+            if all("label" in G.nodes[child] for child in children):
+                label_set = set()
+                for child in children:
+                    label_set.update(G.nodes[child]["label"])
+                G.nodes[node]["label"] = sorted(label_set)
+                newly_labeled.append(node)
+        label_predecessors(newly_labeled)
+
+    label_predecessors(leaves)
+
+    tree_groups = {}
+    for node in G.nodes():
+        label = G.nodes[node]["label"]
+        tree_groups.setdefault(len(label), []).append(label)
+
+    return {str(level): tree_groups[level] for level in sorted(tree_groups)}
+
+
+def networkx_to_tree_json(G: nx.DiGraph, output_path: str) -> dict:
+    tree_groups = networkx_to_tree_groups(G)
+    with open(output_path, "w") as f:
+        json.dump(tree_groups, f, indent=4)
+    return tree_groups
+
+
 class TreeBuilder:
     def __init__(self, tree_groups=None):
         self.G = nx.Graph()
