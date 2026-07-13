@@ -7,7 +7,7 @@ def born_before_threshold(birth,threshold):
     return birth <= threshold + 1e-5
 
 class tda_visual_from_jason:
-    def __init__(self, jason_path, thresholds=None, which_cycle="harmonic_cycles", log_path=None, index_to_name=None, cycle_qualify=None, verbose=False):
+    def __init__(self, jason_path=None, data=None, thresholds=None, which_cycle="harmonic_cycles", log_path=None, index_to_name=None, cycle_qualify=None, verbose=False):
         self.jason_path = jason_path
         self.thresholds = thresholds
         self.which_cycle = which_cycle
@@ -15,8 +15,11 @@ class tda_visual_from_jason:
         self.cycle_qualify = cycle_qualify or (lambda drawn_edges: len(drawn_edges) > 0)
         self.verbose = verbose
 
-        with open(self.jason_path) as f:
-            data = json.load(f)
+        if data is None:
+            if jason_path is None:
+                raise ValueError("either jason_path or data must be provided")
+            with open(self.jason_path) as f:
+                data = json.load(f)
         self.data = data
 
         self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
