@@ -8,25 +8,30 @@ import time
 from .Data_Prep import Data_Prep
 
 class Populate_Edge(Data_Prep):
-    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False):
-        super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn)
+    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,max_node_per_edge=5,verbose=False,weight_attr='length'):
+        super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn,weight_attr=weight_attr)
+        self.verbose = verbose
         if headers:
             headers_path = os.path.join(self.log_path, header_fn)
             with open(headers_path, "r") as f:
                 headers_list = [line.strip() for line in f.readlines()]
             self.index_to_name = dict(enumerate(headers_list))
+        elif all('label' in attrs for _, attrs in G.nodes(data=True)):
+            self.index_to_name = {i: attrs['label'] for i, (_, attrs) in enumerate(G.nodes(data=True))}
         else:
             self.index_to_name = {i: -i for i in range(G.number_of_nodes())}
         if epsilon is None:
-            self.epsilon = np.percentile([d for _, _, d in G.edges(data='length')], 40)
+            self.epsilon = np.percentile([d for _, _, d in G.edges(data=self.weight_attr)], 40)
         else:
-            print(f"Epsilon is set to a custom value {epsilon}")
+            if self.verbose:
+                print(f"Epsilon is set to a custom value {epsilon}")
             self.epsilon = epsilon
         self.max_index = G.number_of_nodes()
         self.original_node_count = G.number_of_nodes()
         self.vis = vis
         self.num_added = 0
         self.populated_header_fn = populated_header_fn
+        self.max_node_per_edge = max_node_per_edge
  
 
     def visualise(self,name):
@@ -37,14 +42,20 @@ class Populate_Edge(Data_Prep):
             node["color"] = "#000000" if node["id"] < self.original_node_count else "#ff0000"
             node["font"] = {"size": 8}
         for edge in net.edges:
-            edge["label"] = str(round(edge['length'], 3))
+            edge["label"] = str(round(edge[self.weight_attr], 3))
             edge["font"] = {"size": 8}
         net.write_html(os.path.join(self.log_path,name))
 
     def add_nodes_to_one_edge(self,u,v,length):
         number_nodes = math.floor(length/self.epsilon)-(1 if math.isclose(length % self.epsilon, 0) else 0)
-        if number_nodes >= 1:
+        if number_nodes > self.max_node_per_edge:
+            number_nodes = self.max_node_per_edge
+            edge_weight = length / (number_nodes + 1)
+            last_edge_weight = edge_weight
+        else:
+            edge_weight = self.epsilon
             last_edge_weight = length - number_nodes * self.epsilon
+        if number_nodes >= 1:
             max_index = self.max_index
             self.G.remove_edge(u,v)
             extra_nodes = []
@@ -54,10 +65,10 @@ class Populate_Edge(Data_Prep):
                 self.index_to_name[node_name] = node_name
                 extra_nodes.append(node_name)
 
-            self.G.add_edge(u,extra_nodes[0],length=self.epsilon)
+            self.G.add_edge(u,extra_nodes[0],**{self.weight_attr:edge_weight})
             for i in range(1,number_nodes):
-                self.G.add_edge(extra_nodes[i-1],extra_nodes[i],length=self.epsilon)
-            self.G.add_edge(extra_nodes[-1],v,length=last_edge_weight)
+                self.G.add_edge(extra_nodes[i-1],extra_nodes[i],**{self.weight_attr:edge_weight})
+            self.G.add_edge(extra_nodes[-1],v,**{self.weight_attr:last_edge_weight})
             self.max_index = max_index + number_nodes
             self.num_added += number_nodes
 
@@ -70,17 +81,17 @@ class Populate_Edge(Data_Prep):
         edges = list(self.G.edges(data=False))
         for e in edges:
             u,v = e
-            length = self.G.edges[e]['length']
+            length = self.G.edges[e][self.weight_attr]
             self.add_nodes_to_one_edge(u,v,length)
-        print(f"{self.num_added} nodes added")
+        if self.verbose:
+            print(f"{self.num_added} nodes added")
 
         with open(os.path.join(self.log_path, self.populated_header_fn), "w") as f:
             f.write("\n".join(str(v) for v in self.index_to_name.values()))
 
-        dist_matrix = nx.floyd_warshall_numpy(self.G, weight='length')
+        dist_matrix = nx.floyd_warshall_numpy(self.G, weight=self.weight_attr)
         self.matrix = dist_matrix
         np.savetxt(os.path.join(self.log_path,"populated_distance_matrix.txt"), dist_matrix)
-        print("populated distance matrix is saved")
         if self.vis:
             self.visualise("populated_network.html")
         return dist_matrix

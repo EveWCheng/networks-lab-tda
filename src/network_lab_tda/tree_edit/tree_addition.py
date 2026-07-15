@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import networkx as nx
 from pathlib import Path
 from pyvis.network import Network
@@ -8,7 +9,59 @@ import copy
 
 def load_one_tree(json_path):
     with open(json_path) as json_data:
-        return {int(k): tuple(v) for k, v in json.load(json_data).items()}
+        data = json.load(json_data)
+    return {int(k): tuple(v) for k, v in data.items()}
+
+
+def networkx_to_tree_groups(G: nx.DiGraph, numeric_labels: bool = False) -> dict:
+    leaves = set(n for n in G.nodes() if G.nodes[n].get("is_leaf"))
+
+    for n in G.nodes():
+        if n not in leaves:
+            G.nodes[n].pop("label", None)
+
+    for leaf in leaves:
+        label = G.nodes[leaf]["label"]
+        if numeric_labels:
+            match = re.search(r'\d+', str(label))
+            label = int(match.group()) if match else label
+        G.nodes[leaf]["label"] = [label]
+
+    def label_predecessors(frontier):
+        if not frontier:
+            return
+        candidates = set()
+        for node in frontier:
+            candidates.update(G.predecessors(node))
+
+        newly_labeled = []
+        for node in candidates:
+            if "label" in G.nodes[node]:
+                continue
+            children = list(G.successors(node))
+            if all("label" in G.nodes[child] for child in children):
+                label_set = set()
+                for child in children:
+                    label_set.update(G.nodes[child]["label"])
+                G.nodes[node]["label"] = sorted(label_set)
+                newly_labeled.append(node)
+        label_predecessors(newly_labeled)
+
+    label_predecessors(leaves)
+
+    tree_groups = {}
+    for node in G.nodes():
+        label = G.nodes[node]["label"]
+        tree_groups.setdefault(len(label), []).append(label)
+
+    return {str(level): tree_groups[level] for level in sorted(tree_groups)}
+
+
+def networkx_to_tree_json(G: nx.DiGraph, output_path: str, numeric_labels: bool = False) -> dict:
+    tree_groups = networkx_to_tree_groups(G, numeric_labels=numeric_labels)
+    with open(output_path, "w") as f:
+        json.dump(tree_groups, f, indent=4)
+    return tree_groups
 
 
 class TreeBuilder:
@@ -68,12 +121,18 @@ class TreeBuilder:
             self.add_tree_edges(n=1,nodes=list(copy.deepcopy(self.nodes)))
         
 
-def build_tree(input_dir: str):
+def build_tree(input_dir: str = None, graphs: list = None, numeric_labels: bool = False):
     builder = TreeBuilder()
-    for json_file in Path(input_dir).glob("*tree*.json"):
-        tree_groups = load_one_tree(json_file)
-        builder.load_tree(tree_groups)
-        builder.add_tree()
+    if graphs is not None:
+        for G in graphs:
+            tree_groups = networkx_to_tree_groups(G, numeric_labels=numeric_labels)
+            builder.load_tree(tree_groups)
+            builder.add_tree()
+    else:
+        for json_file in Path(input_dir).glob("*tree*.json"):
+            tree_groups = load_one_tree(json_file)
+            builder.load_tree(tree_groups)
+            builder.add_tree()
     return builder
 
 
@@ -82,20 +141,24 @@ def visualize(G: nx.Graph, output: str = "tree.html") -> None:
     net = Network()
     def _node_id(node):
         return "_".join(str(x) for x in node) if isinstance(node, tuple) else str(node)
-    for node in G.nodes():
-        net.add_node(_node_id(node), label=_node_id(node))
+    for node, attrs in G.nodes(data=True):
+        label = attrs["label"] if "label" in attrs else node
+        net.add_node(_node_id(node), label=_node_id(label))
     for u, v in G.edges():
         net.add_edge(_node_id(u), _node_id(v))
     net.write_html(output)
 
 
-def merge_trees(input_dir=".", output_dir=".", vis=False):
-    os.makedirs(output_dir, exist_ok=True)
-    builder = build_tree(input_dir=input_dir)
-    data = {"nodes": list(builder.G.nodes()), "edges": list(builder.G.edges())}
-    with open(os.path.join(output_dir, "merged_tree.json"), "w") as f:
-        json.dump(data, f, indent=4, default=list)
+def merge_trees(input_dir=".", output_dir=".", vis=False, graphs=None, save_json=True, numeric_labels: bool = False):
+    builder = build_tree(input_dir=input_dir, graphs=graphs, numeric_labels=numeric_labels)
+    if save_json:
+        os.makedirs(output_dir, exist_ok=True)
+        data = {"1": list(builder.G.nodes()), "2": list(builder.G.edges())}
+        with open(os.path.join(output_dir, "merged_tree.json"), "w") as f:
+            json.dump(data, f, indent=4, default=list)
     if vis:
+        os.makedirs(output_dir, exist_ok=True)
         visualize(builder.G, output=os.path.join(output_dir, "tree.html"))
+    return nx.convert_node_labels_to_integers(builder.G, label_attribute="label")
 
 

@@ -6,7 +6,9 @@ import warnings
 
 
 class Data_Prep:
-    def __init__(self,filepath=None,matrix=None,G=None,log_path=None,headers=False,header_fn="header.txt"):
+    def __init__(self,filepath=None,matrix=None,G=None,log_path=None,headers=False,header_fn="header.txt",verbose=False,weight_attr='length'):
+        self.verbose = verbose
+        self.weight_attr = weight_attr
         self.log_path = log_path or os.path.join(os.getcwd(), "outputs")
         os.makedirs(self.log_path, exist_ok=True)
  
@@ -23,12 +25,10 @@ class Data_Prep:
         elif matrix is not None:
             self.matrix = matrix
         elif G is not None:
-            warnings.warn(
-                "Distance matrix is being derived from G's adjacency matrix.",
-                UserWarning
-            )
+            if self.verbose:
+                warnings.warn("Distance matrix is being derived from G's adjacency matrix.",UserWarning)
             self.G = G
-            self.matrix = nx.adjacency_matrix(G,weight="length").toarray()
+            self.matrix = nx.adjacency_matrix(G,weight=self.weight_attr).toarray()
         else:
             raise ValueError("You need to pass either a distance matrix or a filepath or a networkx object")
 
@@ -40,7 +40,7 @@ class Data_Prep:
             for i in range(n):
                 for j in range(i + 1, n):
                     if self.matrix[i,j]>0:
-                        self.G.add_edge(i, j, length=self.matrix[i, j])
+                        self.G.add_edge(i, j, **{self.weight_attr: self.matrix[i, j]})
         else:
             self.G = G
 
