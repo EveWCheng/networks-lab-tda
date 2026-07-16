@@ -85,7 +85,8 @@ class TreeBuilder:
     def add_G_nodes(self, names, flag):
         for name in names:
             node_id = tuple(name)
-            self.G.add_node(node_id)
+            if node_id not in self.G:
+                self.G.add_node(node_id)
             self.G.nodes[node_id].setdefault("sources", set()).add(flag)
 
     def add_G_edge(self, u, v):
