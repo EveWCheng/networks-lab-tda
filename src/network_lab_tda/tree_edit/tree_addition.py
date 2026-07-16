@@ -82,20 +82,21 @@ class TreeBuilder:
             return []
         return self.tree_groups.get(self.dim + n, [])
 
-    def add_G_nodes(self, names):
+    def add_G_nodes(self, names, flag):
         for name in names:
             node_id = tuple(name)
             self.G.add_node(node_id)
+            self.G.nodes[node_id].setdefault("sources", set()).add(flag)
 
     def add_G_edge(self, u, v):
         if u not in self.G or v not in self.G:
             raise ValueError(f"Node {u} or {v} does not exist in G")
         self.G.add_edge(u, v)
 
-    def add_tree_nodes(self):
+    def add_tree_nodes(self, flag):
         self.dim += 1
         nodes = self.tree_groups.get(self.dim, [])
-        self.add_G_nodes(nodes)
+        self.add_G_nodes(nodes, flag)
         self.nodes = nodes
 
     def add_tree_edges(self,n,nodes):
@@ -112,27 +113,29 @@ class TreeBuilder:
                         nodes[i].remove(x)
         self.add_tree_edges(n+1,nodes)
 
-    def add_tree(self):
+    def add_tree(self, flag):
         #add leaves
-        self.add_tree_nodes()
+        self.add_tree_nodes(flag)
         #add the rest:
         while self.dim <= self.max_dim:
-            self.add_tree_nodes() 
+            self.add_tree_nodes(flag)
             self.add_tree_edges(n=1,nodes=list(copy.deepcopy(self.nodes)))
         
 
 def build_tree(input_dir: str = None, graphs: list = None, numeric_labels: bool = False):
     builder = TreeBuilder()
     if graphs is not None:
-        for G in graphs:
+        for i, G in enumerate(graphs):
+            flag = G.graph.get("name", i)
             tree_groups = networkx_to_tree_groups(G, numeric_labels=numeric_labels)
             builder.load_tree(tree_groups)
-            builder.add_tree()
+            builder.add_tree(flag)
     else:
         for json_file in Path(input_dir).glob("*tree*.json"):
+            flag = json_file.stem
             tree_groups = load_one_tree(json_file)
             builder.load_tree(tree_groups)
-            builder.add_tree()
+            builder.add_tree(flag)
     return builder
 
 

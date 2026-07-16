@@ -1,10 +1,10 @@
 from network_lab_tda.tree_edit.tree_addition import TreeBuilder
 
 
-def build(tree_groups):
+def build(tree_groups, flag="t"):
     tb = TreeBuilder()
     tb.load_tree(tree_groups)
-    tb.add_tree()
+    tb.add_tree(flag)
     return tb.G
 
 
@@ -50,9 +50,9 @@ def test_second_tree_merges_onto_same_builder():
 
     tb = TreeBuilder()
     tb.load_tree(tree_groups_1)
-    tb.add_tree()
+    tb.add_tree("tree_1")
     tb.load_tree(tree_groups_2)
-    tb.add_tree()
+    tb.add_tree("tree_2")
     G = tb.G
 
     assert set(G.nodes()) == {

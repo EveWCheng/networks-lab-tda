@@ -15,7 +15,7 @@ class tda_visual_from_jason:
 
         self.which_cycle = which_cycle
         self.index_to_name = index_to_name
-        self.cycle_qualify = cycle_qualify or (lambda drawn_edges: len(drawn_edges) > 0)
+        self.cycle_qualify = cycle_qualify or (lambda cycle: any(edge["weight"] != 0 for edge in cycle["edges"]))
         self.verbose = verbose
 
         if data is None:
@@ -100,7 +100,7 @@ class tda_visual_from_jason:
         cycles = []
         for cycle in self.data[self.which_cycle]:
             drawn_edges = [(edge["simplex"], edge["weight"]) for edge in cycle["edges"] if edge["weight"]!=0]
-            if not self.cycle_qualify(drawn_edges):
+            if not self.cycle_qualify(cycle):
                 continue
             if born_before_threshold(cycle["birth"],threshold) and (cycle["death"] is None or float(cycle["death"]) > threshold):
                 cycles.append({"edges": drawn_edges, "birth": cycle["birth"], "death": cycle["death"]})

@@ -96,7 +96,7 @@ class simplicial_pyvis:
             name = self.index_to_name[node]
  #           label = "" if isinstance(name, (int, float)) and name > 0 else str(name)
             label = str(name)
-            self.net.add_node(node, label=label, size=5, font={"size": 40})
+            self.net.add_node(node, label=label, size=5, font={"size": 25})
 
         self.add_cycles()
 
