@@ -67,6 +67,7 @@ def networkx_to_tree_json(G: nx.DiGraph, output_path: str, numeric_labels: bool 
 class TreeBuilder:
     def __init__(self, tree_groups=None):
         self.G = nx.Graph()
+        self.n_graph = 0
 
     def load_tree(self, tree_groups):
         self.tree_groups = tree_groups
@@ -92,7 +93,12 @@ class TreeBuilder:
     def add_G_edge(self, u, v):
         if u not in self.G or v not in self.G:
             raise ValueError(f"Node {u} or {v} does not exist in G")
-        self.G.add_edge(u, v)
+        if self.G.has_edge(u, v):
+            self.G.edges[u, v]["n_graph"] += 1
+            if self.G.edges[u, v]["n_graph"] == self.n_graph:
+                self.G.edges[u, v]["label"] = "all_shared"
+        else:
+            self.G.add_edge(u, v, n_graph=1)
 
     def add_tree_nodes(self, flag):
         self.dim += 1
@@ -126,13 +132,16 @@ class TreeBuilder:
 def build_tree(input_dir: str = None, graphs: list = None, numeric_labels: bool = False):
     builder = TreeBuilder()
     if graphs is not None:
+        builder.n_graph = len(graphs)
         for i, G in enumerate(graphs):
             flag = G.graph.get("name", i)
             tree_groups = networkx_to_tree_groups(G, numeric_labels=numeric_labels)
             builder.load_tree(tree_groups)
             builder.add_tree(flag)
     else:
-        for json_file in Path(input_dir).glob("*tree*.json"):
+        json_files = list(Path(input_dir).glob("*tree*.json"))
+        builder.n_graph = len(json_files)
+        for json_file in json_files:
             flag = json_file.stem
             tree_groups = load_one_tree(json_file)
             builder.load_tree(tree_groups)
