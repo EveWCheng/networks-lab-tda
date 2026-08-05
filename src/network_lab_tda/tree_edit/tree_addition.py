@@ -96,7 +96,7 @@ class TreeBuilder:
         if self.G.has_edge(u, v):
             self.G.edges[u, v]["n_graph"] += 1
             if self.G.edges[u, v]["n_graph"] == self.n_graph:
-                self.G.edges[u, v]["label"] = "all_shared"
+                self.G.edges[u, v]["label"] = "true_edge"
         else:
             self.G.add_edge(u, v, n_graph=1)
 
