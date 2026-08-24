@@ -4,12 +4,18 @@ from pyvis.network import Network
 import math
 import os
 import time
+import warnings
 
 from .Data_Prep import Data_Prep
 
 class Populate_Edge(Data_Prep):
     def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,max_node_per_edge=5,verbose=False,weight_attr='length'):
         super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn,weight_attr=weight_attr)
+        if G.is_directed():
+            warnings.warn(
+                "Populate_Edge received a directed graph; populate_edges() computes all-pairs distances with nx.floyd_warshall_numpy, which follows edge direction only -- most pairs (e.g. siblings, child->ancestor) will have no directed path and come out as inf. Pass G.to_undirected() if you want real pairwise distances.",
+                UserWarning,
+            )
         self.verbose = verbose
         if headers:
             headers_path = os.path.join(self.log_path, header_fn)
@@ -26,7 +32,7 @@ class Populate_Edge(Data_Prep):
             if self.verbose:
                 print(f"Epsilon is set to a custom value {epsilon}")
             self.epsilon = epsilon
-        self.max_index = G.number_of_nodes()
+        self.max_index = G.number_of_nodes()  # phantom nodes are named "added_node_<i>" (strings), so this is just a label offset, not a collision-avoidance mechanism anymore
         self.original_node_count = G.number_of_nodes()
         self.vis = vis
         self.num_added = 0
@@ -39,7 +45,7 @@ class Populate_Edge(Data_Prep):
         net.from_nx(self.G)
         for node in net.nodes:
             node["label"] = str(node["id"])
-            node["color"] = "#000000" if node["id"] < self.original_node_count else "#ff0000"
+            node["color"] = "#ff0000" if isinstance(node["id"], str) and node["id"].startswith("added_node_") else "#000000"
             node["font"] = {"size": 8}
         for edge in net.edges:
             edge["label"] = str(round(edge[self.weight_attr], 3))
@@ -60,9 +66,9 @@ class Populate_Edge(Data_Prep):
             self.G.remove_edge(u,v)
             extra_nodes = []
             for number in range(number_nodes):
-                node_name = max_index+number
+                node_name = f"added_node_{max_index+number}"
                 self.G.add_node(node_name)
-                self.index_to_name[node_name] = node_name
+                self.index_to_name[max_index+number] = node_name
                 extra_nodes.append(node_name)
 
             self.G.add_edge(u,extra_nodes[0],**{self.weight_attr:edge_weight})
@@ -83,8 +89,7 @@ class Populate_Edge(Data_Prep):
             u,v = e
             length = self.G.edges[e][self.weight_attr]
             self.add_nodes_to_one_edge(u,v,length)
-        if self.verbose:
-            print(f"{self.num_added} nodes added")
+        print(f"Populate_Edge: added {self.num_added} phantom nodes ({self.original_node_count} -> {self.original_node_count + self.num_added})")
 
         with open(os.path.join(self.log_path, self.populated_header_fn), "w") as f:
             f.write("\n".join(str(v) for v in self.index_to_name.values()))
