@@ -9,7 +9,7 @@ import warnings
 from .Data_Prep import Data_Prep
 
 class Populate_Edge(Data_Prep):
-    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,max_node_per_edge=5,verbose=False,weight_attr='length'):
+    def __init__(self,G,log_path=None,headers=False,header_fn="header.txt",populated_header_fn="populated_headers.txt",epsilon=None,vis=False,max_node_per_edge=5,verbose=False,weight_attr='length',should_populate_fxn=None):
         super().__init__(G=G,log_path=log_path,headers=headers,header_fn=header_fn,weight_attr=weight_attr)
         if G.is_directed():
             warnings.warn(
@@ -38,7 +38,8 @@ class Populate_Edge(Data_Prep):
         self.num_added = 0
         self.populated_header_fn = populated_header_fn
         self.max_node_per_edge = max_node_per_edge
- 
+        self.should_populate_fxn = should_populate_fxn
+
 
     def visualise(self,name):
         net = Network(notebook=False)
@@ -84,10 +85,11 @@ class Populate_Edge(Data_Prep):
         if self.vis:
             self.visualise("unpopulated_network.html")
  
-        edges = list(self.G.edges(data=False))
-        for e in edges:
-            u,v = e
-            length = self.G.edges[e][self.weight_attr]
+        edges = list(self.G.edges(data=True))
+        for u,v,attrs in edges:
+            if self.should_populate_fxn is not None and not self.should_populate_fxn(u,v,attrs):
+                continue
+            length = attrs[self.weight_attr]
             self.add_nodes_to_one_edge(u,v,length)
         print(f"Populate_Edge: added {self.num_added} phantom nodes ({self.original_node_count} -> {self.original_node_count + self.num_added})")
 
