@@ -15,10 +15,8 @@ class harmonic_cycle(Rips):
     def run_harmonics(self, threshold=float('inf'), save=True):
         simplices, appears_at = self.rips_filtration(threshold=threshold, log=self.sim_log)
         result = self.compute_harmonics(simplices, appears_at)
-        # always fold every detected cycle's birth into self.log["thresholds"], on top of
-        # whatever the caller seeded it with (e.g. self.log["thresholds"] = [...] before calling)
-        births = {c["birth"] for c in self.log.get("harmonic_cycles", [])}
-        self.log["thresholds"] = sorted(set(self.log.get("thresholds", [])) | births)
+#        births = {c["birth"] for c in self.log.get("harmonic_cycles", [])}
+#        self.log["thresholds"] = sorted(set(self.log.get("thresholds", [])) | births)
         if save:
             self.save_log()
         return result
