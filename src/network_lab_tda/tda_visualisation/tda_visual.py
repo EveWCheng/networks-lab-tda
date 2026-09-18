@@ -8,37 +8,6 @@ def born_before_threshold(birth,threshold):
 
 class tda_visual_from_jason:
     def __init__(self, jason_path=None, plt_together=True, plt_sep = False,data=None, thresholds=None, which_cycle="harmonic_cycles", log_path=None, index_to_name=None, cycle_qualify=None, verbose=False):
-        """Render the persistent cycles stored in a TDA json export as pyvis networks.
-
-        Options
-        -------
-        jason_path : str, optional
-            Path to the TDA json export. Read only when ``data`` is not given;
-            one of ``jason_path`` / ``data`` is required.
-        data : dict, optional
-            Already-loaded json export. Takes precedence over ``jason_path``.
-        plt_together : bool, default True
-            Plot every qualifying cycle at a given threshold on a single network.
-        plt_sep : bool, default False
-            Also emit one network per individual cycle. ``plt_together`` and
-            ``plt_sep`` are independent; if both are False nothing is plotted.
-        thresholds : list[float], optional
-            Filtration values at which to draw a snapshot. Whatever is passed here
-            is unioned with the thresholds derived from the data (see __init__ body):
-            the cycle birth times, or - if no cycles - the last edge birth.
-        which_cycle : str, default "harmonic_cycles"
-            Key in the json holding the cycles to draw (e.g. "harmonic_cycles",
-            "representative_cycles").
-        log_path : str, optional
-            Output directory for the generated html. Defaults to ``./outputs``.
-        index_to_name : dict[int, Any], optional
-            Vertex-index -> display-label map. Defaults to ``{v: -v}`` for each vertex.
-        cycle_qualify : callable, optional
-            ``cycle -> bool`` predicate deciding whether a cycle is drawn at all.
-            Default keeps cycles that have at least one non-zero-weight edge.
-        verbose : bool, default False
-            Emit warnings / prints about skipped plots, fallbacks and dimension limits.
-        """
         self.jason_path = jason_path
         self.plt_together = plt_together          # combined network per threshold
         self.plt_sep = plt_sep                    # one network per cycle
