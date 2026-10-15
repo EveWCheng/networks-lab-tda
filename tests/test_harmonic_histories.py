@@ -181,6 +181,15 @@ def test_history_snapshots_stay_closed(late_triangle_D, tmp_path):
             assert boundary == pytest.approx(np.zeros(5), abs=1e-8)
 
 
+@pytest.mark.parametrize("fixture", ["late_triangle_D", "four_triangles_D", "tied_triangles_D", "shared_edge_D"])
+def test_every_seen_face_recorded_at_every_snapshot(fixture, request, tmp_path):
+    H, _, _ = _computer(request.getfixturevalue(fixture), tmp_path, threshold=1.3)
+    for history in H.compute_harmonic_histories(1).values():
+        times = _times(history)
+        for pts in history.values():
+            assert [s for s, _ in pts] == times
+
+
 def test_edge_ids_restricts_recorded_faces(late_triangle_D, tmp_path):
     H, simplices, _ = _computer(late_triangle_D, tmp_path, threshold=1.3)
     keep = {_simplex_id(simplices, 0, 1), _simplex_id(simplices, 0, 4)}
